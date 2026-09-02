@@ -21,9 +21,14 @@ import {
   Check,
   Smartphone,
 } from 'lucide-react';
-import { useApp, useCountUp, formatCompact, formatRupee } from '@/lib/app-context';
+import { useApp, useCountUp, formatCompact } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
-import { JOURNEY_STEPS, WOW_FEATURES, DEMO_FLOW, STATS } from '@/lib/data';
+import {
+  getJourneySteps,
+  getWowFeatures,
+  getStats,
+  getDemoFlow,
+} from '@/lib/data';
 import { usePlatformStats } from '@/lib/hooks';
 
 const HERO_IMG =
@@ -120,17 +125,22 @@ function StatCard({
 }
 
 export function LandingView() {
-  const { t, setView } = useApp();
+  const { t, lang, setView } = useApp();
   const { data: stats } = usePlatformStats();
+
+  const journeySteps = getJourneySteps(lang);
+  const wowFeatures = getWowFeatures(lang);
+  const demoFlow = getDemoFlow(lang);
+  const fallbackStats = getStats(lang);
 
   const liveStats = stats
     ? [
-        { value: stats.farmers_connected, suffix: '+', label: 'Farmers Connected', icon: 'users' },
-        { value: stats.procurement_centers, suffix: '+', label: 'Procurement Centers', icon: 'store' },
-        { value: stats.quintals_procured, suffix: '+', label: 'Quintals Procured', icon: 'wheat', format: 'compact' as const },
-        { value: stats.payments_processed_cr, suffix: 'Cr+', label: 'Payments Processed', icon: 'wallet', format: 'rupee' as const },
+        { value: stats.farmers_connected, suffix: '+', label: fallbackStats[0]?.label ?? 'Farmers Connected', icon: 'users' },
+        { value: stats.procurement_centers, suffix: '+', label: fallbackStats[1]?.label ?? 'Procurement Centers', icon: 'store' },
+        { value: stats.quintals_procured, suffix: '+', label: fallbackStats[2]?.label ?? 'Quintals Procured', icon: 'wheat', format: 'compact' as const },
+        { value: stats.payments_processed_cr, suffix: lang === 'te' ? 'కోట్లు+' : 'Cr+', label: fallbackStats[3]?.label ?? 'Payments Processed', icon: 'wallet', format: 'rupee' as const },
       ]
-    : STATS;
+    : fallbackStats;
 
   return (
     <div className="overflow-hidden">
@@ -145,7 +155,7 @@ export function LandingView() {
         <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-5 pb-20 pt-28 lg:px-8">
           <div className="max-w-3xl">
             <span className="chip bg-white/15 text-leaf-200 backdrop-blur animate-fade-up" style={{ opacity: 0 }}>
-              <Sparkles className="h-3.5 w-3.5" /> AI-Powered Agricultural Procurement
+              <Sparkles className="h-3.5 w-3.5" /> {lang === 'te' ? 'AI-ఆధారిత వ్యవసాయ కొనుగోలు ప్లాట్‌ఫారమ్' : 'AI-Powered Agricultural Procurement'}
             </span>
             <h1
               className="mt-5 font-display text-4xl font-extrabold leading-[1.1] text-white text-balance sm:text-5xl lg:text-6xl animate-fade-up"
@@ -187,16 +197,16 @@ export function LandingView() {
           {/* Floating glass cards */}
           <div className="mt-12 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="animate-float">
-              <HeroCard icon={Ticket} label="Token" value="#A127" accent="bg-leaf-500/30" delay={500} />
+              <HeroCard icon={Ticket} label={lang === 'te' ? 'టోకెన్' : 'Token'} value="#A127" accent="bg-leaf-500/30" delay={500} />
             </div>
             <div className="animate-float-slow">
-              <HeroCard icon={Clock} label="Waiting" value="24 min" accent="bg-gold-400/30" delay={600} />
+              <HeroCard icon={Clock} label={lang === 'te' ? 'వేచియుండే సమయం' : 'Waiting'} value={`24 ${t('minutes')}`} accent="bg-gold-400/30" delay={600} />
             </div>
             <div className="animate-float">
-              <HeroCard icon={Wheat} label="Produce" value="40 Q" accent="bg-leaf-500/30" delay={700} />
+              <HeroCard icon={Wheat} label={lang === 'te' ? 'పంట' : 'Produce'} value={`40 ${lang === 'te' ? 'క్విం' : 'Q'}`} accent="bg-leaf-500/30" delay={700} />
             </div>
             <div className="animate-float-slow">
-              <HeroCard icon={Wallet} label="Payment" value="₹92,400" accent="bg-gold-400/30" delay={800} />
+              <HeroCard icon={Wallet} label={lang === 'te' ? 'చెల్లింపు' : 'Payment'} value="₹92,400" accent="bg-gold-400/30" delay={800} />
             </div>
           </div>
         </div>
@@ -216,7 +226,7 @@ export function LandingView() {
           </Reveal>
 
           <div className="mt-14 flex gap-4 overflow-x-auto pb-4 scrollbar-hide lg:grid lg:grid-cols-6 lg:gap-4 lg:overflow-visible">
-            {JOURNEY_STEPS.map((step, i) => {
+            {journeySteps.map((step, i) => {
               const Icon = ICONS[step.icon] ?? Sprout;
               return (
                 <Reveal
@@ -234,7 +244,7 @@ export function LandingView() {
                     {step.title}
                   </h3>
                   <p className="mt-1 text-sm text-forest-600">{step.desc}</p>
-                  {i < JOURNEY_STEPS.length - 1 && (
+                  {i < journeySteps.length - 1 && (
                     <span className="absolute -right-2 top-10 hidden text-leaf-400 lg:block">
                       <ArrowRight className="h-5 w-5" />
                     </span>
@@ -254,7 +264,7 @@ export function LandingView() {
               <Users className="h-3.5 w-3.5" /> {t('stats_title')}
             </span>
             <h2 className="mt-4 display-heading text-3xl sm:text-4xl lg:text-5xl">
-              Trusted by farmers across the region
+              {t('stats_heading')}
             </h2>
           </Reveal>
           <div className="mt-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -280,7 +290,7 @@ export function LandingView() {
             </h2>
           </Reveal>
           <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {WOW_FEATURES.map((f, i) => {
+            {wowFeatures.map((f, i) => {
               const Icon = ICONS[f.icon] ?? Sparkles;
               return (
                 <Reveal key={f.title} delay={i * 80}>
@@ -305,17 +315,17 @@ export function LandingView() {
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <Reveal className="text-center">
             <span className="section-eyebrow">
-              <Smartphone className="h-3.5 w-3.5" /> Cinematic Demo Flow
+              <Smartphone className="h-3.5 w-3.5" /> {t('cinematic_title')}
             </span>
             <h2 className="mt-4 display-heading text-3xl sm:text-4xl lg:text-5xl">
-              From harvest to payment in minutes
+              {t('cinematic_sub')}
             </h2>
           </Reveal>
 
           <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {DEMO_FLOW.map((step, i) => {
+            {demoFlow.map((step, i) => {
               const Icon = ICONS[step.icon] ?? Sprout;
-              const isLast = i === DEMO_FLOW.length - 1;
+              const isLast = i === demoFlow.length - 1;
               return (
                 <Reveal
                   key={i}
@@ -363,7 +373,7 @@ export function LandingView() {
                   {t('footer_tag')}
                 </h2>
                 <p className="mt-3 text-lg text-white/70">
-                  Join 25,000+ farmers who save time and get fair prices.
+                  {t('cta_sub')}
                 </p>
                 <button
                   onClick={() => setView('dashboard')}
@@ -379,3 +389,4 @@ export function LandingView() {
     </div>
   );
 }
+

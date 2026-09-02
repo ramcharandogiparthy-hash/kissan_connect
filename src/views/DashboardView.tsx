@@ -13,10 +13,16 @@ import {
   Bell,
   Star,
   TrendingDown,
+  Truck,
+  Award,
+  PlusCircle,
+  XCircle,
+  MessageSquareWarning,
+  CloudRain,
 } from 'lucide-react';
 import { useApp, formatRupee } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
-import { FARMER, QUEUE, NOTIFICATIONS } from '@/lib/data';
+import { QUEUE, getFarmerData, getNotifications } from '@/lib/data';
 import {
   useToken,
   useQueue,
@@ -24,6 +30,13 @@ import {
   useAIRecommendation,
   type NotificationItem,
 } from '@/lib/hooks';
+import { QualityAssessorModal } from '@/components/QualityAssessorModal';
+import { TransportHubModal } from '@/components/TransportHubModal';
+import { BookSlotModal } from '@/components/BookSlotModal';
+import { CancelSlotModal } from '@/components/CancelSlotModal';
+import { ComplaintModal } from '@/components/ComplaintModal';
+import { WeatherAlertModal } from '@/components/WeatherAlertModal';
+import { AIPredictorModal } from '@/components/AIPredictorModal';
 
 function CircularProgress({ pct }: { pct: number }) {
   const r = 52;
@@ -139,8 +152,16 @@ function NotificationCard({ n, index }: { n: NotificationItem; index: number }) 
 }
 
 export function DashboardView() {
-  const { t, setView } = useApp();
+  const { t, lang, setView, activeToken } = useApp();
   const [progress, setProgress] = useState(0);
+
+  const [showQualityModal, setShowQualityModal] = useState(false);
+  const [showTransportModal, setShowTransportModal] = useState(false);
+  const [showBookSlotModal, setShowBookSlotModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [showWeatherModal, setShowWeatherModal] = useState(false);
+  const [showPredictorModal, setShowPredictorModal] = useState(false);
 
   const { data: token } = useToken();
   const { data: queue } = useQueue();
@@ -151,6 +172,8 @@ export function DashboardView() {
     const timer = setTimeout(() => setProgress(75), 300);
     return () => clearTimeout(timer);
   }, []);
+
+  const fallbackFarmer = getFarmerData(lang);
 
   const farmer = token
     ? {
@@ -164,14 +187,27 @@ export function DashboardView() {
         quantity: token.quantity_quintals,
         amount: token.quantity_quintals * 2310,
       }
-    : FARMER;
+    : {
+        ...fallbackFarmer,
+        token: activeToken.token,
+        center: activeToken.center,
+        date: activeToken.date,
+        time: activeToken.time,
+        farmersAhead: activeToken.farmersAhead,
+        estimatedWaitMin: activeToken.estimatedWaitMin,
+        crop: activeToken.crop,
+        quantity: activeToken.quantity,
+        amount: activeToken.quantity * 2310,
+      };
 
   const liveQueue = queue && queue.length > 0
     ? queue.map((item) => ({ token: item.token_number, status: item.status, isYou: item.is_you, id: item.id }))
     : QUEUE.map((item, index) => ({ token: item.token, status: item.status, isYou: item.isYou ?? false, id: `fallback-${index}` }));
+  
+  const fallbackNotifs = getNotifications(lang);
   const liveNotifs = notifications && notifications.length > 0
     ? notifications
-    : NOTIFICATIONS.map((item) => ({ ...item, display_time: item.time }));
+    : fallbackNotifs.map((item) => ({ ...item, display_time: item.time }));
 
   return (
     <div className="mx-auto max-w-7xl px-5 pb-24 pt-28 lg:px-8 lg:pb-12">
@@ -186,9 +222,136 @@ export function DashboardView() {
           </div>
           <div className="flex items-center gap-2">
             <span className="chip bg-leaf-100 text-leaf-700">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-leaf-500" /> Live
+              <span className="h-2 w-2 animate-pulse rounded-full bg-leaf-500" /> {lang === 'te' ? 'లైవ్' : lang === 'hi' ? 'लाइव' : 'Live'}
             </span>
           </div>
+        </div>
+      </Reveal>
+
+      {/* Live Crop Weather Warning Banner */}
+      <Reveal delay={40}>
+        <div
+          onClick={() => setShowWeatherModal(true)}
+          className="mt-4 cursor-pointer overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-indigo-900 to-forest-900 p-4 text-white shadow-glass border border-blue-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:scale-[1.01] transition"
+        >
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-500/30 border border-blue-400/40 text-blue-200">
+              <CloudRain className="h-5 w-5 animate-bounce" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="chip bg-rose-500 text-white font-bold text-[10px]">
+                  Unseasonal Rain Warning
+                </span>
+                <span className="text-xs font-semibold text-blue-200">Guntur & Krishna Region</span>
+              </div>
+              <p className="text-sm font-extrabold mt-0.5 text-white">
+                {lang === 'te'
+                  ? 'భారీ వర్ష సూచన (85% అవకాశం) - తడిసిపోకుండా ధాన్యాన్ని కప్పండి & ముందస్తు స్లాట్ తీసుకోండి'
+                  : lang === 'hi'
+                  ? 'भारी बारिश की चेतावनी (85%) - अनाज को तिरपाल से ढकें और जल्दी स्लॉट लें'
+                  : 'Heavy Rain Forecast in 18 hrs (85% Risk) — Cover Paddy & Book Slot Early'}
+              </p>
+            </div>
+          </div>
+          <button className="rounded-2xl bg-blue-500/30 border border-blue-300/40 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-500/50 transition shrink-0 flex items-center justify-center gap-1.5">
+            View Weather Radar <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </Reveal>
+
+      {/* Procurement Operations Action Hub */}
+      <Reveal delay={80}>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {/* AI Smart Predictor Card */}
+          <button
+            onClick={() => setShowPredictorModal(true)}
+            className="group flex items-center gap-3.5 rounded-4xl glass p-4 text-left shadow-sm transition hover:shadow-glass hover:scale-[1.02] border-2 border-gold-400/40 bg-gradient-to-br from-cream-100/50 to-gold-50/30"
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-gold-400 to-amber-500 text-white shadow-glow">
+              <Sparkles className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-display text-base font-extrabold text-forest-900">
+                {lang === 'te' ? 'AI స్మార్ట్ ప్రిడిక్టర్' : lang === 'hi' ? 'AI प्रेडिक्टर' : 'AI Predictor'}
+              </p>
+              <p className="text-xs text-forest-500 mt-0.5">
+                {lang === 'te' ? 'వేచియుండే సమయం & MSP అంచనా' : lang === 'hi' ? 'प्रतीक्षा समय व आय अनुमान' : 'Predict wait, queue & payout'}
+              </p>
+            </div>
+          </button>
+
+          {/* Quality Assessor Card */}
+          <button
+            onClick={() => setView('quality')}
+            className="group flex items-center gap-3.5 rounded-4xl glass p-4 text-left shadow-sm transition hover:shadow-glass hover:scale-[1.02] border-2 border-leaf-400/40 bg-gradient-to-br from-leaf-50/50 to-cream-50"
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-leaf-500 to-forest-700 text-white shadow-glow">
+              <Award className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-display text-base font-extrabold text-forest-950 flex items-center gap-1.5">
+                🌾 {lang === 'te' ? 'పంట నాణ్యతా స్థితి' : 'Quality Checkup'}
+              </p>
+              <p className="text-xs text-forest-600 mt-0.5">
+                {lang === 'te' ? 'తేమ, గ్రేడింగ్ & ధృవీకరణ' : 'Track moisture, parameters & cert'}
+              </p>
+            </div>
+          </button>
+
+          {/* Transport Hub Card */}
+          <button
+            onClick={() => setShowTransportModal(true)}
+            className="group flex items-center gap-3.5 rounded-4xl glass p-4 text-left shadow-sm transition hover:shadow-glass hover:scale-[1.02]"
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-glow">
+              <Truck className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-display text-base font-extrabold text-forest-900">
+                {t('transport_hub_btn')}
+              </p>
+              <p className="text-xs text-forest-500 mt-0.5">
+                {t('transport_hub_sub')}
+              </p>
+            </div>
+          </button>
+
+          {/* New Slot Booking Card */}
+          <button
+            onClick={() => setShowBookSlotModal(true)}
+            className="group flex items-center gap-3.5 rounded-4xl glass p-4 text-left shadow-sm transition hover:shadow-glass hover:scale-[1.02]"
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-leaf-500 to-emerald-600 text-white shadow-glow">
+              <PlusCircle className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-display text-base font-extrabold text-forest-900">
+                {t('new_slot_btn')}
+              </p>
+              <p className="text-xs text-forest-500 mt-0.5">
+                {t('new_slot_sub')}
+              </p>
+            </div>
+          </button>
+
+          {/* Complaint Box Card */}
+          <button
+            onClick={() => setShowComplaintModal(true)}
+            className="group flex items-center gap-3.5 rounded-4xl glass p-4 text-left shadow-sm transition hover:shadow-glass hover:scale-[1.02]"
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-glow">
+              <MessageSquareWarning className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="font-display text-base font-extrabold text-forest-900">
+                {lang === 'te' ? 'ఫిర్యాదుల పెట్టె' : lang === 'hi' ? 'शिकायत पेटिका' : 'Complaint Box'}
+              </p>
+              <p className="text-xs text-forest-500 mt-0.5">
+                {lang === 'te' ? 'సమస్యలు నమోదు & పరిష్కారం' : lang === 'hi' ? 'शिकायत दर्ज व ट्रैक करें' : 'File grievance & track ticket'}
+              </p>
+            </div>
+          </button>
         </div>
       </Reveal>
 
@@ -202,7 +365,7 @@ export function DashboardView() {
                 <div className="flex items-center gap-2">
                   <Ticket className="h-5 w-5 text-leaf-300" />
                   <span className="text-xs font-semibold tracking-wider text-leaf-200">
-                    YOUR TOKEN
+                    {t('your_token')}
                   </span>
                 </div>
                 <p className="mt-2 font-display text-6xl font-extrabold tracking-tight">
@@ -211,7 +374,7 @@ export function DashboardView() {
                 <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-leaf-300" />
-                    <span className="text-white/70">Center:</span>
+                    <span className="text-white/70">{lang === 'te' ? 'కేంద్రం:' : lang === 'hi' ? 'केंद्र:' : 'Center:'}</span>
                     <span className="font-semibold">{farmer.center}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -224,29 +387,39 @@ export function DashboardView() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-leaf-300" />
-                    <span className="text-white/70">Ahead:</span>
-                    <span className="font-semibold">{farmer.farmersAhead} farmers</span>
+                    <span className="text-white/70">{t('ahead')}</span>
+                    <span className="font-semibold">{farmer.farmersAhead} {t('farmers')}</span>
                   </div>
                 </div>
                 <div className="mt-5 flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
                   <Clock className="h-5 w-5 text-gold-300" />
-                  <span className="text-sm text-white/70">Estimated Waiting:</span>
+                  <span className="text-sm text-white/70">{t('estimated_waiting')}</span>
                   <span className="font-display text-lg font-bold text-gold-300">
-                    {farmer.estimatedWaitMin} min
+                    {farmer.estimatedWaitMin} {t('minutes')}
                   </span>
                   <span className="ml-auto flex items-center gap-1.5 chip bg-leaf-500/30 text-leaf-200">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> ON TRACK
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {t('on_track')}
                   </span>
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-3.5">
                 <CircularProgress pct={progress} />
-                <button
-                  onClick={() => setView('token')}
-                  className="btn-gold text-sm"
-                >
-                  View Token <ArrowRight className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex flex-col gap-1.5 w-full text-center">
+                  <button
+                    onClick={() => setView('token')}
+                    className="btn-gold text-sm w-full"
+                  >
+                    {t('view_token')} <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                  {(activeToken.status === 'Confirmed' || activeToken.status === 'Upcoming') && (
+                    <button
+                      onClick={() => setShowCancelModal(true)}
+                      className="inline-flex items-center justify-center gap-1 text-xs font-bold text-rose-300 hover:text-rose-100 hover:underline transition pt-1"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> {t('cancel_slot')}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -267,33 +440,33 @@ export function DashboardView() {
 
             <div className="mt-4 space-y-3">
               <div className="rounded-2xl border border-forest-100 bg-cream-50 p-3.5">
-                <p className="text-xs font-medium text-forest-500">Your selected slot</p>
+                <p className="text-xs font-medium text-forest-500">{t('selected_slot')}</p>
                 <p className="mt-0.5 font-display text-xl font-bold text-forest-700">
                   {aiRec?.selected_slot ?? '11:30 AM'}
                 </p>
                 <p className="text-xs text-forest-400">
-                  {aiRec?.selected_wait_min ?? 61} min waiting
+                  {aiRec?.selected_wait_min ?? 61} {t('minutes')} {lang === 'te' ? 'వేచియుండే సమయం' : 'waiting'}
                 </p>
               </div>
               <div className="rounded-2xl border-2 border-leaf-300 bg-leaf-50 p-3.5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-leaf-700">Recommended slot</p>
+                  <p className="text-xs font-medium text-leaf-700">{t('recommended_slot')}</p>
                   <Star className="h-4 w-4 fill-gold-400 text-gold-400" />
                 </div>
                 <p className="mt-0.5 font-display text-xl font-bold text-leaf-700">
                   {aiRec?.recommended_slot ?? '10:30 AM'}
                 </p>
                 <p className="text-xs text-leaf-600">
-                  {aiRec?.recommended_wait_min ?? 24} min waiting
+                  {aiRec?.recommended_wait_min ?? 24} {t('minutes')} {lang === 'te' ? 'వేచియుండే సమయం' : 'waiting'}
                 </p>
               </div>
             </div>
 
             <div className="mt-4 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-leaf-500 to-forest-600 px-4 py-3 text-white">
               <TrendingDown className="h-5 w-5 text-gold-300" />
-              <span className="text-sm text-white/80">Time saved:</span>
+              <span className="text-sm text-white/80">{t('time_saved')}:</span>
               <span className="font-display text-lg font-bold text-gold-300">
-                {aiRec?.time_saved_min ?? 37} min
+                {aiRec?.time_saved_min ?? 37} {t('minutes')}
               </span>
             </div>
 
@@ -322,14 +495,14 @@ export function DashboardView() {
 
             <div className="mt-4 flex items-center justify-between rounded-2xl bg-forest-50 px-4 py-3">
               <div>
-                <p className="text-xs text-forest-500">Current Token</p>
+                <p className="text-xs text-forest-500">{lang === 'te' ? 'ప్రస్తుత టోకెన్' : 'Current Token'}</p>
                 <p className="font-display text-lg font-bold text-forest-800">
                   {liveQueue[0]?.token ?? 'A124'}
                 </p>
               </div>
               <ArrowRight className="h-5 w-5 text-forest-300" />
               <div className="text-right">
-                <p className="text-xs text-forest-500">Your Token</p>
+                <p className="text-xs text-forest-500">{lang === 'te' ? 'మీ టోకెన్' : 'Your Token'}</p>
                 <p className="font-display text-lg font-bold text-leaf-600">{farmer.token}</p>
               </div>
             </div>
@@ -359,7 +532,7 @@ export function DashboardView() {
           <div className="rounded-5xl glass p-6">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-leaf-600" />
-              <h3 className="font-display text-xl font-bold text-forest-900">Notifications</h3>
+              <h3 className="font-display text-xl font-bold text-forest-900">{t('notifications')}</h3>
             </div>
             <div className="mt-4 space-y-2.5">
               {liveNotifs.map((n, i) => (
@@ -374,10 +547,10 @@ export function DashboardView() {
       <Reveal>
         <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { icon: Wheat, label: 'My Produce', value: `${farmer.quantity} Quintals`, view: 'dashboard' as const },
-            { icon: Wallet, label: 'Payment', value: formatRupee(farmer.amount), view: 'payment' as const },
-            { icon: MapPin, label: 'Centers', value: '8 Nearby', view: 'map' as const },
-            { icon: Ticket, label: 'Token', value: farmer.token, view: 'token' as const },
+            { icon: Wheat, label: t('my_produce'), value: `${farmer.quantity} ${lang === 'te' ? 'క్వింటాళ్లు' : 'Quintals'}`, view: 'dashboard' as const },
+            { icon: Wallet, label: t('payment'), value: formatRupee(farmer.amount), view: 'payment' as const },
+            { icon: MapPin, label: t('centers'), value: `${lang === 'te' ? '8 సమీపంలో' : '8 Nearby'}`, view: 'map' as const },
+            { icon: Ticket, label: t('nav_token'), value: farmer.token, view: 'token' as const },
           ].map((a) => {
             const Icon = a.icon;
             return (
@@ -416,6 +589,40 @@ export function DashboardView() {
           </div>
         </div>
       </Reveal>
+
+      {/* Procurement Modals */}
+      <QualityAssessorModal
+        isOpen={showQualityModal}
+        onClose={() => setShowQualityModal(false)}
+      />
+      <TransportHubModal
+        isOpen={showTransportModal}
+        onClose={() => setShowTransportModal(false)}
+        centerName={farmer.center}
+        appointmentTime={farmer.time}
+      />
+      <BookSlotModal
+        isOpen={showBookSlotModal}
+        onClose={() => setShowBookSlotModal(false)}
+      />
+      <CancelSlotModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        token={activeToken}
+      />
+      <ComplaintModal
+        isOpen={showComplaintModal}
+        onClose={() => setShowComplaintModal(false)}
+      />
+      <WeatherAlertModal
+        isOpen={showWeatherModal}
+        onClose={() => setShowWeatherModal(false)}
+      />
+      <AIPredictorModal
+        isOpen={showPredictorModal}
+        onClose={() => setShowPredictorModal(false)}
+      />
     </div>
   );
 }
+

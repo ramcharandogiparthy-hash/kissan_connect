@@ -9,47 +9,18 @@ import {
   AlertTriangle,
   Sparkles,
   BarChart3,
-  TrendingUp,
-  Clock3,
   PieChart,
   Star,
   Smile,
 } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
-import { CENTER_DASH, CROP_DATA, WEEK_VOLUME, SATISFACTION } from '@/lib/data';
-import {
-  useCenterStats,
-  useSmartAlerts,
-  useCropDist,
-  useWeekVolume,
-  useSatisfaction,
-} from '@/lib/hooks';
+import { CENTER_DASH, WEEK_VOLUME, SATISFACTION, getCropData } from '@/lib/data';
+import { useCenterStats, useSmartAlerts, useCropDist, useWeekVolume, useSatisfaction } from '@/lib/hooks';
+import { ProcurementVolumeChart } from '@/components/ProcurementVolumeChart';
+import { WaitingTimeTrendChart } from '@/components/WaitingTimeTrendChart';
 
 type Filter = 'today' | 'week' | 'month' | 'year';
-
-function MiniBarChart({ data, color }: { data: { day: string; value: number }[]; color: string }) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-  return (
-    <div className="flex h-40 items-end justify-between gap-2">
-      {data.map((d, i) => (
-        <div key={d.day} className="flex flex-1 flex-col items-center gap-1.5">
-          <div className="flex w-full flex-1 items-end">
-            <div
-              className="w-full rounded-t-lg transition-all duration-700"
-              style={{
-                height: `${(d.value / max) * 100}%`,
-                background: `linear-gradient(to top, ${color}, ${color}80)`,
-                animationDelay: `${i * 100}ms`,
-              }}
-            />
-          </div>
-          <span className="text-[10px] font-medium text-forest-400">{d.day}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function DonutChart({ data }: { data: { crop: string; pct: number; color: string }[] }) {
   const radius = 60;
@@ -122,7 +93,7 @@ function StatCard({
 }
 
 export function AnalyticsView() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const [filter, setFilter] = useState<Filter>('week');
   const [capacity, setCapacity] = useState(0);
 
@@ -156,12 +127,13 @@ export function AnalyticsView() {
     : WEEK_VOLUME);
 
   const waitData = (weekVol && weekVol.length > 0
-    ? weekVol.map((w) => ({ day: w.day, value: w.wait_min }))
-    : WEEK_VOLUME.map((d) => ({ ...d, value: Math.round(d.value * 0.6) })));
+    ? weekVol.map((w) => ({ day: w.day, wait_min: w.wait_min }))
+    : WEEK_VOLUME.map((d) => ({ day: d.day, wait_min: Math.round(d.value * 0.4) })));
 
+  const fallbackCrops = getCropData(lang);
   const cropData = (cropDist && cropDist.length > 0
     ? cropDist.map((c) => ({ crop: c.crop, pct: c.pct, color: c.color }))
-    : CROP_DATA);
+    : fallbackCrops.map((c) => ({ crop: c.crop, pct: c.pct, color: c.color })));
 
   const satData = (satisfaction && satisfaction.length > 0
     ? satisfaction.map((s) => ({ label: s.label, pct: s.pct }))
@@ -183,7 +155,9 @@ export function AnalyticsView() {
             <span className="section-eyebrow">
               <BarChart3 className="h-3.5 w-3.5" /> {t('analytics_title')}
             </span>
-            <h1 className="mt-3 display-heading text-3xl sm:text-4xl">Center Dashboard</h1>
+            <h1 className="mt-3 display-heading text-3xl sm:text-4xl">
+              {lang === 'te' ? 'కేంద్ర సమాచార డాష్‌బోర్డ్' : lang === 'hi' ? 'खरीद केंद्र डैशबोर्ड' : 'Center Dashboard'}
+            </h1>
           </div>
           <div className="flex gap-1 rounded-2xl glass p-1">
             {filters.map((f) => (
@@ -196,7 +170,13 @@ export function AnalyticsView() {
                     : 'text-forest-600 hover:bg-cream-100'
                 }`}
               >
-                {f === 'today' ? 'Today' : f === 'week' ? 'Week' : f === 'month' ? 'Month' : 'Year'}
+                {f === 'today'
+                  ? (lang === 'te' ? 'ఈ రోజు' : lang === 'hi' ? 'आज' : 'Today')
+                  : f === 'week'
+                  ? (lang === 'te' ? 'ఈ వారం' : lang === 'hi' ? 'इस सप्ताह' : 'Week')
+                  : f === 'month'
+                  ? (lang === 'te' ? 'ఈ నెల' : lang === 'hi' ? 'इस महीने' : 'Month')
+                  : (lang === 'te' ? 'ఈ సంవత్సరం' : lang === 'hi' ? 'इस वर्ष' : 'Year')}
               </button>
             ))}
           </div>
@@ -206,12 +186,12 @@ export function AnalyticsView() {
       {/* Top stat cards */}
       <Reveal delay={100}>
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard icon={Users} value={String(stats.farmers_today)} label="Farmers Today" color="bg-leaf-100 text-leaf-600" />
-          <StatCard icon={Ticket} value={String(stats.tokens)} label="Tokens" color="bg-gold-100 text-gold-700" />
-          <StatCard icon={Clock} value={String(stats.waiting)} label="Waiting" color="bg-red-100 text-red-600" />
-          <StatCard icon={CheckCircle2} value={String(stats.completed)} label="Completed" color="bg-leaf-100 text-leaf-600" />
-          <StatCard icon={Wheat} value={String(stats.quintals)} label="Quintals" color="bg-cream-200 text-forest-700" />
-          <StatCard icon={Wallet} value={`₹${stats.payments_lakh}L`} label="Payments" color="bg-forest-100 text-forest-700" />
+          <StatCard icon={Users} value={String(stats.farmers_today)} label={lang === 'te' ? 'ఈ రోజు రైతులు' : lang === 'hi' ? 'आज के किसान' : 'Farmers Today'} color="bg-leaf-100 text-leaf-600" />
+          <StatCard icon={Ticket} value={String(stats.tokens)} label={lang === 'te' ? 'టోకెన్లు' : lang === 'hi' ? 'कुल टोकन' : 'Tokens'} color="bg-gold-100 text-gold-700" />
+          <StatCard icon={Clock} value={String(stats.waiting)} label={lang === 'te' ? 'వేచి ఉన్నారు' : lang === 'hi' ? 'प्रतीक्षारत' : 'Waiting'} color="bg-red-100 text-red-600" />
+          <StatCard icon={CheckCircle2} value={String(stats.completed)} label={lang === 'te' ? 'పూర్తయ్యాయి' : lang === 'hi' ? 'संपन्न' : 'Completed'} color="bg-leaf-100 text-leaf-600" />
+          <StatCard icon={Wheat} value={String(stats.quintals)} label={lang === 'te' ? 'క్వింటాళ్లు' : lang === 'hi' ? 'क्विंटल' : 'Quintals'} color="bg-cream-200 text-forest-700" />
+          <StatCard icon={Wallet} value={`₹${stats.payments_lakh}L`} label={lang === 'te' ? 'జమయిన సొమ్ము' : lang === 'hi' ? 'कुल भुगतान' : 'Payments'} color="bg-forest-100 text-forest-700" />
         </div>
       </Reveal>
 
@@ -220,9 +200,11 @@ export function AnalyticsView() {
         <Reveal className="lg:col-span-2">
           <div className="rounded-5xl glass p-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-bold text-forest-900">Center Capacity</h3>
+              <h3 className="font-display text-lg font-bold text-forest-900">
+                {lang === 'te' ? 'కేంద్ర సామర్థ్యం' : lang === 'hi' ? 'केंद्र क्षमता' : 'Center Capacity'}
+              </h3>
               <span className="chip bg-leaf-100 text-leaf-700">
-                <span className="h-2 w-2 rounded-full bg-leaf-500" /> Healthy
+                <span className="h-2 w-2 rounded-full bg-leaf-500" /> {lang === 'te' ? 'ఆరోగ్యకరం' : lang === 'hi' ? 'सामान्य' : 'Healthy'}
               </span>
             </div>
             <div className="mt-5">
@@ -230,7 +212,7 @@ export function AnalyticsView() {
                 <span className="font-display text-5xl font-extrabold gradient-text">
                   {capacity}%
                 </span>
-                <span className="text-sm text-forest-500">of maximum capacity</span>
+                <span className="text-sm text-forest-500">{lang === 'te' ? 'గరిష్ట సామర్థ్యంలో' : lang === 'hi' ? 'अधिकतम क्षमता पर' : 'of maximum capacity'}</span>
               </div>
               <div className="mt-4 h-4 overflow-hidden rounded-full bg-forest-50">
                 <div
@@ -253,18 +235,18 @@ export function AnalyticsView() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               <h3 className="font-display text-lg font-bold">
-                {alert?.title ?? 'High Crowd Alert'}
+                {alert?.title ?? (lang === 'te' ? 'అధిక రద్దీ హెచ్చరిక' : lang === 'hi' ? 'अधिक भीड़ चेतावनी' : 'High Crowd Alert')}
               </h3>
             </div>
             <p className="mt-2 text-sm text-white/90">
-              {alert?.body ?? 'Vijayawada Center is approaching maximum capacity.'}
+              {alert?.body ?? (lang === 'te' ? 'విజయవాడ కేంద్రం గరిష్ట సామర్థ్యానికి చేరుకుంటోంది.' : lang === 'hi' ? 'विजयवाड़ा केंद्र पर भीड़ बढ़ रही है।' : 'Vijayawada Center is approaching maximum capacity.')}
             </p>
             <div className="mt-4 rounded-2xl bg-white/15 p-3 backdrop-blur">
               <p className="flex items-center gap-1.5 text-xs font-semibold text-gold-200">
-                <Sparkles className="h-3.5 w-3.5" /> AI Recommendation
+                <Sparkles className="h-3.5 w-3.5" /> AI {lang === 'te' ? 'సిఫార్సు' : lang === 'hi' ? 'सुझाव' : 'Recommendation'}
               </p>
               <p className="mt-1 text-sm text-white/90">
-                {alert?.recommendation ?? 'Redirect 18 upcoming farmers to Guntur Center.'}
+                {alert?.recommendation ?? (lang === 'te' ? '18 మంది రైతులను గుంటూరు కొనుగోలు కేంద్రానికి మళ్లించండి.' : lang === 'hi' ? '18 किसानों को गुंटूर केंद्र पर पुनर्निर्देशित करें।' : 'Redirect 18 upcoming farmers to Guntur Center.')}
               </p>
             </div>
             <button className="mt-4 w-full rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-cream-50">
@@ -278,14 +260,7 @@ export function AnalyticsView() {
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Reveal>
           <div className="rounded-5xl glass p-6">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-leaf-600" />
-              <h3 className="font-display text-lg font-bold text-forest-900">Procurement Volume</h3>
-            </div>
-            <p className="mt-1 text-xs text-forest-500">Quintals per day this week</p>
-            <div className="mt-5">
-              <MiniBarChart data={volumeData} color="#22c55e" />
-            </div>
+            <ProcurementVolumeChart data={volumeData} />
           </div>
         </Reveal>
 
@@ -293,9 +268,13 @@ export function AnalyticsView() {
           <div className="rounded-5xl glass p-6">
             <div className="flex items-center gap-2">
               <PieChart className="h-5 w-5 text-leaf-600" />
-              <h3 className="font-display text-lg font-bold text-forest-900">Crop-wise Procurement</h3>
+              <h3 className="font-display text-lg font-bold text-forest-900">
+                {lang === 'te' ? 'పంటల వారీగా కొనుగోలు' : lang === 'hi' ? 'फसल अनुसार खरीद' : 'Crop-wise Procurement'}
+              </h3>
             </div>
-            <p className="mt-1 text-xs text-forest-500">Distribution by crop type</p>
+            <p className="mt-1 text-xs text-forest-500">
+              {lang === 'te' ? 'పంట రకం వారీగా శాతం విభజన' : lang === 'hi' ? 'फसल के अनुसार प्रतिशत वितरण' : 'Distribution by crop type'}
+            </p>
             <div className="mt-5">
               <DonutChart data={cropData} />
             </div>
@@ -307,14 +286,7 @@ export function AnalyticsView() {
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Reveal>
           <div className="rounded-5xl glass p-6">
-            <div className="flex items-center gap-2">
-              <Clock3 className="h-5 w-5 text-gold-600" />
-              <h3 className="font-display text-lg font-bold text-forest-900">Waiting Time Trend</h3>
-            </div>
-            <p className="mt-1 text-xs text-forest-500">Average minutes per farmer</p>
-            <div className="mt-5">
-              <MiniBarChart data={waitData} color="#fbbf24" />
-            </div>
+            <WaitingTimeTrendChart data={waitData} />
           </div>
         </Reveal>
 
@@ -322,14 +294,18 @@ export function AnalyticsView() {
           <div className="rounded-5xl glass p-6">
             <div className="flex items-center gap-2">
               <Smile className="h-5 w-5 text-leaf-600" />
-              <h3 className="font-display text-lg font-bold text-forest-900">Farmer Satisfaction</h3>
+              <h3 className="font-display text-lg font-bold text-forest-900">
+                {lang === 'te' ? 'రైతుల సంతృప్తి రేటింగ్' : lang === 'hi' ? 'किसान संतुष्टि रेटिंग' : 'Farmer Satisfaction'}
+              </h3>
             </div>
-            <p className="mt-1 text-xs text-forest-500">Based on {totalRatings.toLocaleString('en-IN')} ratings</p>
+            <p className="mt-1 text-xs text-forest-500">
+              {lang === 'te' ? `${totalRatings.toLocaleString('en-IN')} రేటింగ్‌ల ఆధారంగా` : lang === 'hi' ? `${totalRatings.toLocaleString('en-IN')} रेटिंग के आधार पर` : `Based on ${totalRatings.toLocaleString('en-IN')} ratings`}
+            </p>
             <div className="mt-5 space-y-3">
               {satData.map((s, i) => (
                 <div key={s.label} className="flex items-center gap-3">
                   <span className="flex w-16 items-center gap-0.5 text-xs font-medium text-forest-600">
-                    {s.label.replace(' Star', '')}
+                    {s.label.replace(' Star', '').replace(' స్టార్', '')}
                     <Star className="h-3 w-3 fill-gold-400 text-gold-400" />
                   </span>
                   <div className="h-3 flex-1 overflow-hidden rounded-full bg-forest-50">
@@ -348,7 +324,9 @@ export function AnalyticsView() {
                 <span className="font-display text-2xl font-extrabold text-forest-900">
                   {avgRating.toFixed(1)}
                 </span>
-                <span className="text-sm text-forest-500">average rating</span>
+                <span className="text-sm text-forest-500">
+                  {lang === 'te' ? 'సగటు సంతృప్తి రేటింగ్' : lang === 'hi' ? 'औसत संतुष्टि रेटिंग' : 'average rating'}
+                </span>
               </div>
             </div>
           </div>
@@ -357,3 +335,4 @@ export function AnalyticsView() {
     </div>
   );
 }
+

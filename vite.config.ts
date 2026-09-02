@@ -5,12 +5,21 @@ import { fileURLToPath, URL } from 'node:url';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/',
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    warmup: {
+      clientFiles: ['./src/main.tsx', './src/App.tsx'],
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    include: ['lucide-react', 'react', 'react-dom', '@supabase/supabase-js'],
   },
 });

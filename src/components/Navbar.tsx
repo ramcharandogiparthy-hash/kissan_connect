@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sprout, Menu, X, Globe, Mic, LayoutDashboard, Ticket, MapPin, Wallet, LogIn, LogOut, User, IndianRupee } from 'lucide-react';
+import { Sprout, Menu, X, Globe, Mic, LayoutDashboard, Ticket, MapPin, Wallet, LogIn, LogOut, IndianRupee } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import { LANG_LABELS } from '@/lib/i18n';
 import type { Lang, ViewId } from '@/lib/data';
@@ -7,21 +7,25 @@ import type { Lang, ViewId } from '@/lib/data';
 const NAV_ITEMS: { id: ViewId; key: string }[] = [
   { id: 'home', key: 'nav_home' },
   { id: 'dashboard', key: 'nav_dashboard' },
+  { id: 'produce', key: 'nav_produce' },
   { id: 'msp', key: 'nav_msp' },
   { id: 'map', key: 'nav_map' },
   { id: 'token', key: 'nav_token' },
+  { id: 'quality', key: 'nav_quality' },
   { id: 'payment', key: 'nav_payment' },
   { id: 'analytics', key: 'nav_analytics' },
+  { id: 'staff', key: 'nav_staff' },
+  { id: 'admin', key: 'nav_admin' },
 ];
 
 export function Navbar() {
-  const { view, setView, lang, setLang, t, session, signOut } = useApp();
+  const { view, setView, lang, setLang, t, userProfile, signOut } = useApp();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const userName = session?.user?.user_metadata?.full_name ?? session?.user?.email?.split('@')[0] ?? 'Farmer';
+  const userName = userProfile?.fullName || (userProfile?.role === 'staff' ? 'Staff Officer' : 'User');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -86,7 +90,7 @@ export function Navbar() {
                 {LANG_LABELS[lang].native}
               </button>
               {langOpen && (
-                <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl glass p-1.5 animate-scale-in">
+                <div className="absolute right-0 mt-2 w-52 max-h-80 overflow-y-auto rounded-2xl glass p-1.5 animate-scale-in shadow-glass-lg z-50">
                   {(Object.keys(LANG_LABELS) as Lang[]).map((l) => (
                     <button
                       key={l}
@@ -108,26 +112,32 @@ export function Navbar() {
               )}
             </div>
 
-            {session ? (
+            {userProfile ? (
               <div className="relative hidden sm:block">
                 <button
                   onClick={() => setUserMenuOpen((o) => !o)}
                   className="flex items-center gap-2 rounded-xl border border-forest-200 bg-white/60 px-3 py-2 text-sm font-semibold text-forest-700 backdrop-blur transition hover:bg-white"
                 >
                   <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-leaf-500 to-forest-600 text-xs font-bold text-white">
-                    {userName.charAt(0).toUpperCase()}
+                    {userProfile.role === 'admin' ? '🛡️' : userProfile.role === 'staff' ? '👨‍💼' : '👨‍🌾'}
                   </span>
-                  <span className="max-w-24 truncate">{userName}</span>
+                  <span className="max-w-28 truncate">{userName}</span>
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-2xl glass p-1.5 animate-scale-in">
-                    <div className="border-b border-forest-50 px-3 py-2">
-                      <p className="text-xs font-medium text-forest-400">Signed in as</p>
-                      <p className="truncate text-sm font-semibold text-forest-800">{session?.user?.email}</p>
+                  <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-2xl glass p-1.5 animate-scale-in border border-forest-100 shadow-glass-lg z-50">
+                    <div className="border-b border-forest-100 px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-forest-400">Signed in as</p>
+                      <p className="truncate text-xs font-extrabold text-forest-900">{userProfile.fullName}</p>
+                      <span className="chip bg-leaf-100 text-leaf-800 text-[10px] font-bold mt-1">
+                        Role: {userProfile.role.toUpperCase()}
+                      </span>
                     </div>
                     <button
-                      onClick={() => { signOut(); setUserMenuOpen(false); }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                      onClick={() => {
+                        signOut();
+                        setUserMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50 mt-1"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out
@@ -137,10 +147,10 @@ export function Navbar() {
               </div>
             ) : (
               <button
-                onClick={() => go('dashboard')}
-                className="hidden rounded-xl bg-leaf-500 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-leaf-600 sm:inline-flex"
+                onClick={() => go('auth')}
+                className="hidden rounded-xl bg-leaf-500 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-leaf-600 sm:inline-flex items-center gap-1.5"
               >
-                {t('book_slot')}
+                <LogIn className="h-4 w-4" /> Sign In
               </button>
             )}
 
@@ -185,7 +195,7 @@ export function Navbar() {
               ))}
             </div>
             <div className="mt-2 border-t border-forest-100 pt-2.5">
-              {session ? (
+              {userProfile ? (
                 <button
                   onClick={() => { signOut(); setMobileOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
@@ -195,7 +205,7 @@ export function Navbar() {
                 </button>
               ) : (
                 <button
-                  onClick={() => { go('dashboard'); }}
+                  onClick={() => { go('auth'); }}
                   className="flex w-full items-center gap-2 rounded-xl bg-leaf-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-leaf-600"
                 >
                   <LogIn className="h-4 w-4" />
@@ -263,18 +273,17 @@ export function MobileNav() {
 }
 
 export function VoiceButton({ className = '' }: { className?: string }) {
-  const [active, setActive] = useState(false);
+  const { startVoiceInput, lang } = useApp();
+  const label =
+    lang === 'te' ? 'కిసాన్ మిత్ర ని అడగండి' : lang === 'hi' ? 'किसान मित्र से बोलें' : 'Ask Kisan Mitra';
+
   return (
     <button
-      onClick={() => setActive((a) => !a)}
-      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-        active
-          ? 'bg-red-500 text-white shadow-[0_0_30px_rgba(239,68,68,0.5)]'
-          : 'bg-forest-900/80 text-white backdrop-blur hover:bg-forest-900'
-      } ${className}`}
+      onClick={startVoiceInput}
+      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white bg-forest-900/90 backdrop-blur hover:bg-forest-900 transition shadow-glow ${className}`}
     >
-      <Mic className={`h-4 w-4 ${active ? 'animate-bounce-soft' : ''}`} />
-      {active ? 'Listening…' : 'Ask Kisan Mitra'}
+      <Mic className="h-4 w-4 text-leaf-300 animate-pulse" />
+      <span>{label}</span>
     </button>
   );
 }

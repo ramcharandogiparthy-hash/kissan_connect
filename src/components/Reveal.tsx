@@ -29,9 +29,9 @@ export function Reveal({ children, className = '', delay = 0, as = 'div' }: Reve
     return () => io.disconnect();
   }, [delay]);
 
-  const Tag = as as any;
+  const Tag = as as React.ElementType;
   return (
-    <Tag ref={ref as any} className={`reveal ${className}`}>
+    <Tag ref={ref} className={`reveal ${className}`}>
       {children}
     </Tag>
   );

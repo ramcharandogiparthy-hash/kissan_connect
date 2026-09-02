@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
-import { MSP_FALLBACK } from '@/lib/data';
+import { getMspFallbackData } from '@/lib/data';
 import { useMSPPrices, type MSPPrice } from '@/lib/hooks';
 
 function formatPrice(n: number): string {
@@ -22,6 +22,7 @@ function formatPrice(n: number): string {
 }
 
 function MSPCard({ msp, index }: { msp: MSPPrice; index: number }) {
+  const { lang } = useApp();
   const marketPrice = msp.market_price_per_quintal ?? msp.msp_per_quintal;
   const diff = marketPrice - msp.msp_per_quintal;
   const isAbove = diff >= 0;
@@ -90,18 +91,23 @@ function MSPCard({ msp, index }: { msp: MSPPrice; index: number }) {
       {/* Guaranteed badge */}
       <div className="mt-3 flex items-center gap-2 text-xs text-forest-500">
         <Info className="h-3.5 w-3.5 text-gold-500" />
-        Government guaranteed price. You will never receive less than this.
+        {lang === 'te'
+          ? 'ప్రభుత్వ గ్యారెంటీ ధర. మీకు ఎప్పటికీ దీని కంటే తక్కువ లభించదు.'
+          : lang === 'hi'
+          ? 'सरकारी गारंटीकृत मूल्य। आपको इससे कम कभी नहीं मिलेगा।'
+          : 'Government guaranteed price. You will never receive less than this.'}
       </div>
     </div>
   );
 }
 
 export function MSPView() {
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const { data: mspPrices } = useMSPPrices();
   const [search, setSearch] = useState('');
 
-  const prices: MSPPrice[] = mspPrices && mspPrices.length > 0 ? mspPrices : MSP_FALLBACK;
+  const fallbackPrices = getMspFallbackData(lang);
+  const prices: MSPPrice[] = mspPrices && mspPrices.length > 0 ? mspPrices : fallbackPrices;
   const filtered = search.trim()
     ? prices.filter((p) => p.crop.toLowerCase().includes(search.toLowerCase()))
     : prices;
@@ -117,14 +123,17 @@ export function MSPView() {
       {/* Header */}
       <Reveal>
         <span className="section-eyebrow">
-          <IndianRupee className="h-3.5 w-3.5" /> Minimum Support Prices
+          <IndianRupee className="h-3.5 w-3.5" /> {t('msp_title')}
         </span>
         <h1 className="mt-3 display-heading text-3xl sm:text-4xl">
-          Guaranteed fair prices for every crop
+          {t('msp_sub')}
         </h1>
         <p className="mt-2 max-w-2xl text-forest-600">
-          Government-mandated Minimum Support Prices ensure you always get a fair deal.
-          Compare MSP with current market rates and know your guaranteed earnings before you sell.
+          {lang === 'te'
+            ? 'ప్రభుత్వం నిర్ణయించిన కనీస మద్దతు ధరలు మీకు ఎల్లప్పుడూ న్యాయమైన మద్దతును అందిస్తాయి. మీ పంటను విక్రయించే ముందు ప్రస్తుత మార్కెట్ ధరలతో MSPని పోల్చి మీ గ్యారంటీ ఆదాయాన్ని తెలుసుకోండి.'
+            : lang === 'hi'
+            ? 'सरकार द्वारा निर्धारित न्यूनतम समर्थन मूल्य आपको हमेशा न्यायसंगत आय की गारंटी देते हैं। अपनी फसल बेचने से पहले लाइव बाजार दरों के साथ MSP की तुलना करें।'
+            : 'Government-mandated Minimum Support Prices ensure you always get a fair deal. Compare MSP with current market rates and know your guaranteed earnings before you sell.'}
         </p>
       </Reveal>
 
@@ -138,7 +147,7 @@ export function MSPView() {
             <p className="mt-3 font-display text-2xl font-extrabold text-forest-900">
               {formatPrice(avgMSP)}
             </p>
-            <p className="text-xs text-forest-500">Average MSP per quintal</p>
+            <p className="text-xs text-forest-500">{lang === 'te' ? 'సగటు MSP ధర (క్వింటాల్‌కి)' : lang === 'hi' ? 'औसत MSP दर (प्रति क्विंटल)' : 'Average MSP per quintal'}</p>
           </div>
           <div className="rounded-3xl glass p-5 card-hover">
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gold-100 text-gold-700">
@@ -147,7 +156,7 @@ export function MSPView() {
             <p className="mt-3 font-display text-2xl font-extrabold text-forest-900">
               {formatPrice(highestMSP)}
             </p>
-            <p className="text-xs text-forest-500">Highest MSP (Tur/Arhar)</p>
+            <p className="text-xs text-forest-500">{lang === 'te' ? 'అత్యధిక MSP (కందులు/అర్హర్)' : lang === 'hi' ? 'उच्चतम MSP (तूर/अरहर)' : 'Highest MSP (Tur/Arhar)'}</p>
           </div>
           <div className="rounded-3xl glass p-5 card-hover">
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-forest-100 text-forest-700">
@@ -156,7 +165,7 @@ export function MSPView() {
             <p className="mt-3 font-display text-2xl font-extrabold text-forest-900">
               {aboveMSPCount}/{prices.length}
             </p>
-            <p className="text-xs text-forest-500">Crops selling at or above MSP</p>
+            <p className="text-xs text-forest-500">{lang === 'te' ? 'MSP లేదా అంతకంటే ఎక్కువ విక్రయమవుతున్న పంటలు' : lang === 'hi' ? 'MSP पर या ऊपर बिकने वाली फसलें' : 'Crops selling at or above MSP'}</p>
           </div>
         </div>
       </Reveal>
@@ -169,7 +178,7 @@ export function MSPView() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search for a crop…"
+            placeholder={t('search_crop')}
             className="w-full rounded-2xl border border-forest-100 bg-white/70 py-3 pl-11 pr-4 text-sm font-medium text-forest-800 outline-none backdrop-blur transition placeholder:text-forest-400 focus:border-leaf-400 focus:bg-white focus:ring-2 focus:ring-leaf-200"
           />
         </div>
@@ -180,10 +189,10 @@ export function MSPView() {
         <div className="mt-4 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-forest-500" />
           <span className="text-sm font-semibold text-forest-700">
-            {prices[0]?.season ?? 'Kharif 2026'}
+            {prices[0]?.season ?? (lang === 'te' ? 'ఖరీఫ్ 2026' : lang === 'hi' ? 'खरीफ 2026' : 'Kharif 2026')}
           </span>
           <span className="chip bg-leaf-100 text-leaf-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-leaf-500" /> Active
+            <span className="h-1.5 w-1.5 rounded-full bg-leaf-500" /> {lang === 'te' ? 'అమలులో ఉంది' : lang === 'hi' ? 'सक्रिय' : 'Active'}
           </span>
         </div>
       </Reveal>
@@ -196,7 +205,9 @@ export function MSPView() {
           ))
         ) : (
           <div className="col-span-full rounded-3xl glass p-8 text-center">
-            <p className="text-sm text-forest-500">No crops found matching "{search}".</p>
+            <p className="text-sm text-forest-500">
+              {lang === 'te' ? `"${search}" కి సరిపోలే పంటలు కనుగొనబడలేదు.` : lang === 'hi' ? `"${search}" से मेल खाती कोई फसल नहीं मिली।` : `No crops found matching "${search}".`}
+            </p>
           </div>
         )}
       </div>
@@ -208,12 +219,13 @@ export function MSPView() {
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
-            <p className="font-semibold text-forest-800">How MSP protects you</p>
+            <p className="font-semibold text-forest-800">{lang === 'te' ? 'MSP మీ పంట ఆదాయానికి ఎలా రక్షణ ఇస్తుంది' : lang === 'hi' ? 'MSP आपकी फसल आय की सुरक्षा कैसे करता है' : 'How MSP protects you'}</p>
             <p className="mt-1 text-sm text-forest-600">
-              The Minimum Support Price is a government guarantee. When you bring your produce
-              to a KisanConnect procurement center, you will always receive at least the MSP rate —
-              never less. If the market price is higher, you get the market price. It's a safety net
-              that ensures fair, transparent compensation for your hard work.
+              {lang === 'te'
+                ? 'కనీస మద్దతు ధర (MSP) అనేది ప్రభుత్వ గ్యారెంటీ ధర. మీరు మీ పంటను కిసాన్ కనెక్ట్ కొనుగోలు కేంద్రానికి తీసుకొచ్చినప్పుడు, మీకు ఎల్లప్పుడూ కనీసం MSP ధర లభిస్తుంది - అంతకంటే తక్కువ కాదు. మార్కెట్ ధర ఎక్కువగా ఉంటే, మీకు ఆ మార్కెట్ ధర లభిస్తుంది.'
+                : lang === 'hi'
+                ? 'न्यूनतम समर्थन मूल्य (MSP) एक सरकारी गारंटीकृत मूल्य है। जब आप अपनी फसल किसानकनेक्ट केंद्र पर लाते हैं, तो आपको हमेशा न्यूनतम MSP दर मिलेगी — उससे कम कभी नहीं।'
+                : 'The Minimum Support Price is a government guarantee. When you bring your produce to a KisanConnect procurement center, you will always receive at least the MSP rate — never less. If the market price is higher, you get the market price. It\'s a safety net that ensures fair, transparent compensation for your hard work.'}
             </p>
           </div>
         </div>
@@ -221,3 +233,4 @@ export function MSPView() {
     </div>
   );
 }
+
