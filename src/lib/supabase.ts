@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
-const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'placeholder-anon-key';
+const url = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://xbxwnjgnuyqnaszjsvni.supabase.co';
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'sb_publishable_eCLqGT1STxpIBTd_EHqYcw_RyDbX10p';
 
 export const isSupabaseConfigured = Boolean(
-  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+  url && anonKey && !url.includes('placeholder')
 );
 
 export const supabase = createClient(url, anonKey, {
