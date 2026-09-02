@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/kissan_connect/',
+  base: process.env.VERCEL ? '/' : './',
   server: {
     host: true,
     port: 5173,
