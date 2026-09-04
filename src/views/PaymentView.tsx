@@ -125,7 +125,7 @@ function PaymentReceiptModal({
             <div>
               <p className="text-forest-400 font-semibold uppercase text-[10px]">Account / Details</p>
               <p className="font-bold text-sm text-forest-900 mt-0.5">
-                {maskBankAccount(payment.bankLast4)}
+                {maskBankAccount(payment.bankLast4 || '4521')}
               </p>
             </div>
           </div>
@@ -332,8 +332,10 @@ export function PaymentView() {
     setUserRole,
     paymentsList,
     procurementsList,
-    approvePayment,
     processPayout,
+    initiateGatewayPayment,
+    verifyPaymentSignature,
+    processAdminRefund,
     retryFailedPayment,
   } = useApp();
 
@@ -381,18 +383,11 @@ export function PaymentView() {
     if (!pendingApprovalId) return;
     setIsProcessingAction(true);
 
-    const approveRes = approvePayment(pendingApprovalId);
-    if (!approveRes.success) {
-      setToastMsg(approveRes.message);
-      setIsProcessingAction(false);
-      setPendingApprovalId(null);
-      return;
-    }
-
-    setToastMsg(`Payment ${pendingApprovalId} approved! Initiating instant payout...`);
+    setToastMsg(`Payment ${pendingApprovalId} initiating checkout...`);
 
     // Process payout simulation
     const payoutRes = await processPayout(pendingApprovalId);
+    setToastMsg(payoutRes.message);
     setToastMsg(payoutRes.message);
 
     setIsProcessingAction(false);
@@ -662,7 +657,7 @@ export function PaymentView() {
                         {formatRupee(payment.finalPayableAmount)}
                       </p>
                       <p className="text-[11px] text-forest-500">
-                        Method: <span className="font-bold uppercase text-forest-800">{payment.paymentMethod}</span> ({maskBankAccount(payment.bankLast4)})
+                        Method: <span className="font-bold uppercase text-forest-800">{payment.paymentMethod}</span> ({maskBankAccount(payment.bankLast4 || '4521')})
                       </p>
                     </div>
 

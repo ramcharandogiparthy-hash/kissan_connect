@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   Bot,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
@@ -25,12 +26,21 @@ import {
 import { QualityCertificateModal } from '@/components/QualityCertificateModal';
 
 export function QualityView() {
-  const { lang, activeQualityRecord, setMitraOpen } = useApp();
+  const { lang, activeQualityRecord, verifyQualityByStaff, setMitraOpen } = useApp();
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
 
   const record = activeQualityRecord;
   const decisionBadge = getQualityDecisionBadge(record.decision);
+
+  const handleRunAiQualityScan = () => {
+    setScanning(true);
+    setTimeout(() => {
+      verifyQualityByStaff(record.id || record.tokenId, 'accepted');
+      setScanning(false);
+    }, 1200);
+  };
 
   const getStepIcon = (status: QualityStepStatus) => {
     switch (status) {
@@ -117,6 +127,33 @@ export function QualityView() {
               <p className="font-extrabold text-forest-900 mt-0.5">{record.dateStr}</p>
             </div>
           </div>
+
+          {/* Quality Assessment Upgrade Action Banner */}
+          {record.decision === 'in_progress' && (
+            <div className="mt-5 rounded-3xl bg-gradient-to-r from-amber-500/20 via-leaf-500/20 to-emerald-500/20 border-2 border-leaf-400 p-4 sm:p-5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-amber-500 text-white shrink-0 shadow-glow">
+                  <Sparkles className="h-6 w-6 animate-spin" />
+                </div>
+                <div>
+                  <h4 className="font-display text-sm sm:text-base font-bold text-forest-950">
+                    {lang === 'te' ? 'నాణ్యత పరిశీలన స్థితి: ఇన్-ప్రోగ్రెస్ / పౌజ్ పద్ధతిలో ఉంది' : 'Quality Assessment Status: Paused / In Progress'}
+                  </h4>
+                  <p className="text-xs text-forest-700">
+                    {lang === 'te' ? 'AI నాణ్యత తనిఖీని రన్ చేసి ధృవీకరించడానికి క్లిక్ చేయండి' : 'Run instant AI produce scan to verify quality parameters & upgrade pathway status to Step 4 (Quality Verified).'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleRunAiQualityScan}
+                disabled={scanning}
+                className="btn-primary text-xs shrink-0 shadow-lg px-6 py-3"
+              >
+                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4 text-gold-300" />}
+                <span>{scanning ? 'Running AI Scan...' : '⚡ Verify & Complete Assessment'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </Reveal>
 

@@ -102,6 +102,12 @@ export function BookSlotModal({ isOpen, onClose }: BookSlotModalProps) {
                   <option value="Maize">{lang === 'te' ? 'మొక్కజొన్న (Maize)' : 'Maize (మక్క / మొక్కజొన్న)'}</option>
                   <option value="Groundnut">{lang === 'te' ? 'వేరుశనగ (Groundnut)' : 'Groundnut (వేరుశెనగ)'}</option>
                   <option value="Wheat">{lang === 'te' ? 'గోధుమలు (Wheat)' : 'Wheat (గోధుమ)'}</option>
+                  <option value="Green Gram (Moong)">{lang === 'te' ? 'పెసలు (Moong)' : 'Moong / Green Gram (मूंग)'}</option>
+                  <option value="Black Gram (Urad)">{lang === 'te' ? 'మినుములు (Urad)' : 'Urad / Black Gram (उड़द)'}</option>
+                  <option value="Red Chilli">{lang === 'te' ? 'ఎండు మిర్చి (Red Chilli)' : 'Red Chilli (लाल मिर्च)'}</option>
+                  <option value="Sugarcane">{lang === 'te' ? 'చెరకు (Sugarcane)' : 'Sugarcane (गन्ना)'}</option>
+                  <option value="Mustard">{lang === 'te' ? 'ఆవాలు (Mustard)' : 'Mustard (सरसों)'}</option>
+                  <option value="Bengal Gram (Chana)">{lang === 'te' ? 'శనగలు (Chana)' : 'Bengal Gram (चना)'}</option>
                 </select>
               </div>
 
@@ -203,6 +209,9 @@ export function BookSlotModal({ isOpen, onClose }: BookSlotModalProps) {
               <p className="text-sm font-semibold text-leaf-700 mt-1">
                 {crop} • {quantity} {lang === 'te' ? 'క్వింటాళ్లు' : 'Quintals'} • {time}
               </p>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-[11px] font-bold text-purple-800 border border-purple-200">
+                <span>⚡ Consecutive Queue Token Sync Active</span>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 pt-3">

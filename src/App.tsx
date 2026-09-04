@@ -2,6 +2,7 @@ import { AppProvider, useApp } from '@/lib/app-context';
 import { Navbar, MobileNav } from '@/components/Navbar';
 import { KisanMitra } from '@/components/KisanMitra';
 import { HelpButton, Notifications } from '@/components/HelpButton';
+import { DemoToolbar } from '@/components/DemoToolbar';
 import { LandingView } from '@/views/LandingView';
 import { DashboardView } from '@/views/DashboardView';
 import { ProduceView } from '@/views/ProduceView';
@@ -120,8 +121,9 @@ function Shell() {
   return (
     <div className="min-h-screen bg-cream-50">
       {showChrome && <Navbar />}
+      <DemoToolbar />
       <Notifications />
-      <main>
+      <main className="pb-32 lg:pb-12">
         <CurrentView />
       </main>
       <KisanMitra />

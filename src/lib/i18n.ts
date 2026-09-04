@@ -144,6 +144,44 @@ const en: Dict = {
   ask_anything: 'Ask anything…',
   listening: 'Listening…',
   help_title: 'Help & Support',
+
+  // Hackathon Demo Mode & Security
+  demo_mode_title: 'Hackathon Demo Control Bar',
+  demo_mode_desc: 'Quickly switch roles or simulate 1-click end-to-end procurement flow.',
+  switch_role_farmer: 'Switch to Farmer',
+  switch_role_staff: 'Switch to Staff',
+  switch_role_admin: 'Switch to Admin',
+  trigger_demo_flow: 'Run 1-Click Demo Flow',
+
+  // Token 10-Stage Status Progression
+  status_generated: 'Token Generated',
+  status_waiting: 'Waiting in Queue',
+  status_called: 'Called to Counter',
+  status_verified: 'Farmer Verified',
+  status_quality_check: 'Quality Inspection',
+  status_approved: 'Quality Approved',
+  status_rejected: 'Quality Rejected',
+  status_completed: 'Procurement Completed',
+  status_cancelled: 'Token Cancelled',
+  status_expired: 'Token Expired',
+
+  // Quality Inspection
+  quality_score: 'Quality Score',
+  grade_recommendation: 'Grade Recommendation',
+  moisture_deduction: 'Moisture Deduction',
+  foreign_matter: 'Foreign Material',
+  damaged_grains: 'Damaged Grains',
+  net_payable: 'Net Payable Amount',
+  staff_inspector: 'Staff Inspector',
+
+  // RBAC & Permissions
+  perm_quality_check: 'Perform Quality Check',
+  perm_weighing: 'Weight Verification',
+  perm_procurement_management: 'Manage Procurement',
+  perm_payment_verification: 'Verify Payments',
+  perm_farmer_management: 'Manage Farmers',
+  perm_analytics_view: 'View Analytics',
+  access_denied_perm: 'Access Restricted: Permission required',
   footer_tag: 'Less Waiting. More Farming. Fairer Future.',
 };
 

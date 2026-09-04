@@ -574,7 +574,7 @@ export function KisanMitra() {
           unlockAudio();
           setMitraOpen(!mitraOpen);
         }}
-        className="fixed bottom-24 right-4 z-50 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-leaf-500 to-forest-600 text-white shadow-glow-lg transition-all hover:scale-110 animate-glow-pulse lg:bottom-6 lg:right-6"
+        className="fixed bottom-20 right-4 z-50 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-leaf-500 to-forest-600 text-white shadow-glow-lg transition-all hover:scale-110 animate-glow-pulse sm:bottom-24 lg:bottom-6 lg:right-6"
         aria-label="Kisan Mitra Voice AI Assistant"
       >
         {mitraOpen ? <X className="h-6 w-6" /> : <Bot className="h-7 w-7" strokeWidth={2} />}
@@ -588,7 +588,7 @@ export function KisanMitra() {
 
       {/* Voice Assistant Panel */}
       {mitraOpen && (
-        <div className="fixed bottom-40 right-4 z-50 w-[calc(100vw-2rem)] max-w-md origin-bottom-right animate-scale-in lg:bottom-24 lg:right-6">
+        <div className="fixed bottom-36 right-4 z-50 w-[calc(100vw-2rem)] max-w-md origin-bottom-right animate-scale-in sm:bottom-40 lg:bottom-24 lg:right-6">
           <div className="overflow-hidden rounded-4xl glass shadow-glass-lg border border-forest-100/60">
             {/* Header with Language Switcher & Voice Controls */}
             <div className="bg-gradient-to-r from-forest-900 via-forest-800 to-emerald-950 px-5 py-4 text-white">

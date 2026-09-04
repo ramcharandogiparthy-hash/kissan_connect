@@ -106,6 +106,12 @@ export const CENTERS: ProcurementCenter[] = [
   { id: 'kak', name: 'Kakinada Center', district: 'East Godavari', crowd: 'low', farmersWaiting: 9, avgWaitMin: 14, capacityPct: 38, x: 64, y: 44 },
   { id: 'nlg', name: 'Nalgonda Center', district: 'Nalgonda', crowd: 'high', farmersWaiting: 52, avgWaitMin: 76, capacityPct: 91, x: 34, y: 74 },
   { id: 'kurn', name: 'Kurnool Center', district: 'Kurnool', crowd: 'moderate', farmersWaiting: 27, avgWaitMin: 47, capacityPct: 63, x: 24, y: 78 },
+  { id: 'ana', name: 'Anantapur Center', district: 'Anantapur', crowd: 'low', farmersWaiting: 14, avgWaitMin: 20, capacityPct: 50, x: 22, y: 88 },
+  { id: 'rjy', name: 'Rajahmundry Center', district: 'East Godavari', crowd: 'moderate', farmersWaiting: 22, avgWaitMin: 30, capacityPct: 60, x: 58, y: 50 },
+  { id: 'kdp', name: 'Kadapa Center', district: 'YSR Kadapa', crowd: 'low', farmersWaiting: 16, avgWaitMin: 22, capacityPct: 52, x: 38, y: 82 },
+  { id: 'nzb', name: 'Nizamabad Center', district: 'Nizamabad', crowd: 'moderate', farmersWaiting: 35, avgWaitMin: 40, capacityPct: 70, x: 26, y: 32 },
+  { id: 'khm', name: 'Khammam Center', district: 'Khammam', crowd: 'low', farmersWaiting: 11, avgWaitMin: 16, capacityPct: 42, x: 42, y: 48 },
+  { id: 'elr', name: 'Eluru Center', district: 'West Godavari', crowd: 'low', farmersWaiting: 15, avgWaitMin: 22, capacityPct: 55, x: 50, y: 54 },
 ];
 
 export function getCentersData(lang: Lang): ProcurementCenter[] {
@@ -119,6 +125,12 @@ export function getCentersData(lang: Lang): ProcurementCenter[] {
       { id: 'kak', name: 'కాకినాడ కొనుగోలు కేంద్రం', district: 'తూర్పు గోదావరి', crowd: 'low', farmersWaiting: 9, avgWaitMin: 14, capacityPct: 38, x: 64, y: 44 },
       { id: 'nlg', name: 'నల్గొండ కొనుగోలు కేంద్రం', district: 'నల్గొండ', crowd: 'high', farmersWaiting: 52, avgWaitMin: 76, capacityPct: 91, x: 34, y: 74 },
       { id: 'kurn', name: 'కర్నూలు కొనుగోలు కేంద్రం', district: 'కర్నూలు', crowd: 'moderate', farmersWaiting: 27, avgWaitMin: 47, capacityPct: 63, x: 24, y: 78 },
+      { id: 'ana', name: 'అనంతపురం కొనుగోలు కేంద్రం', district: 'అనంతపురం', crowd: 'low', farmersWaiting: 14, avgWaitMin: 20, capacityPct: 50, x: 22, y: 88 },
+      { id: 'rjy', name: 'రాజమండ్రి కొనుగోలు కేంద్రం', district: 'తూర్పు గోదావరి', crowd: 'moderate', farmersWaiting: 22, avgWaitMin: 30, capacityPct: 60, x: 58, y: 50 },
+      { id: 'kdp', name: 'కడప కొనుగోలు కేంద్రం', district: 'వైఎస్సార్ కడప', crowd: 'low', farmersWaiting: 16, avgWaitMin: 22, capacityPct: 52, x: 38, y: 82 },
+      { id: 'nzb', name: 'నిజామాబాద్ కొనుగోలు కేంద్రం', district: 'నిజామాబాద్', crowd: 'moderate', farmersWaiting: 35, avgWaitMin: 40, capacityPct: 70, x: 26, y: 32 },
+      { id: 'khm', name: 'ఖమ్మం కొనుగోలు కేంద్రం', district: 'ఖమ్మం', crowd: 'low', farmersWaiting: 11, avgWaitMin: 16, capacityPct: 42, x: 42, y: 48 },
+      { id: 'elr', name: 'ఏలూరు కొనుగోలు కేంద్రం', district: 'పశ్చిమ గోదావరి', crowd: 'low', farmersWaiting: 15, avgWaitMin: 22, capacityPct: 55, x: 50, y: 54 },
     ];
   }
   if (lang === 'hi') {
@@ -131,6 +143,12 @@ export function getCentersData(lang: Lang): ProcurementCenter[] {
       { id: 'kak', name: 'काकीनाडा खरीद केंद्र', district: 'पूर्वी गोदावरी', crowd: 'low', farmersWaiting: 9, avgWaitMin: 14, capacityPct: 38, x: 64, y: 44 },
       { id: 'nlg', name: 'नलगोंडा खरीद केंद्र', district: 'नलगोंडा', crowd: 'high', farmersWaiting: 52, avgWaitMin: 76, capacityPct: 91, x: 34, y: 74 },
       { id: 'kurn', name: 'कुरनूल खरीद केंद्र', district: 'कुरनूल', crowd: 'moderate', farmersWaiting: 27, avgWaitMin: 47, capacityPct: 63, x: 24, y: 78 },
+      { id: 'ana', name: 'अनंतपुर खरीद केंद्र', district: 'अनंतपुर', crowd: 'low', farmersWaiting: 14, avgWaitMin: 20, capacityPct: 50, x: 22, y: 88 },
+      { id: 'rjy', name: 'राजमुंदरी खरीद केंद्र', district: 'पूर्वी गोदावरी', crowd: 'moderate', farmersWaiting: 22, avgWaitMin: 30, capacityPct: 60, x: 58, y: 50 },
+      { id: 'kdp', name: 'कडपा खरीद केंद्र', district: 'वाईएसआर कडपा', crowd: 'low', farmersWaiting: 16, avgWaitMin: 22, capacityPct: 52, x: 38, y: 82 },
+      { id: 'nzb', name: 'निज़ामाबाद खरीद केंद्र', district: 'निज़ामाबाद', crowd: 'moderate', farmersWaiting: 35, avgWaitMin: 40, capacityPct: 70, x: 26, y: 32 },
+      { id: 'khm', name: 'खम्मम खरीद केंद्र', district: 'खम्मम', crowd: 'low', farmersWaiting: 11, avgWaitMin: 16, capacityPct: 42, x: 42, y: 48 },
+      { id: 'elr', name: 'एलूरु खरीद केंद्र', district: 'पश्चिम गोदावरी', crowd: 'low', farmersWaiting: 15, avgWaitMin: 22, capacityPct: 55, x: 50, y: 54 },
     ];
   }
   return CENTERS;
@@ -414,6 +432,12 @@ export const MSP_FALLBACK = [
   { id: 'f6', crop: 'Soybean', variety: 'Yellow', msp_per_quintal: 4980, market_price_per_quintal: 5050, unit: 'Quintal', season: 'Kharif 2026', change_pct: 3.3, is_active: true },
   { id: 'f7', crop: 'Tur (Arhar)', variety: 'Common', msp_per_quintal: 7525, market_price_per_quintal: 7600, unit: 'Quintal', season: 'Kharif 2026', change_pct: 4.9, is_active: true },
   { id: 'f8', crop: 'Sunflower', variety: 'Common', msp_per_quintal: 7980, market_price_per_quintal: 8100, unit: 'Quintal', season: 'Kharif 2026', change_pct: 1.9, is_active: true },
+  { id: 'f9', crop: 'Moong (Green Gram)', variety: 'Special', msp_per_quintal: 8558, market_price_per_quintal: 8650, unit: 'Quintal', season: 'Kharif 2026', change_pct: 4.2, is_active: true },
+  { id: 'f10', crop: 'Urad (Black Gram)', variety: 'Common', msp_per_quintal: 7400, market_price_per_quintal: 7500, unit: 'Quintal', season: 'Kharif 2026', change_pct: 3.5, is_active: true },
+  { id: 'f11', crop: 'Guntur Red Chilli', variety: 'Dry Premium', msp_per_quintal: 12500, market_price_per_quintal: 13200, unit: 'Quintal', season: 'Rabi 2026', change_pct: 6.1, is_active: true },
+  { id: 'f12', crop: 'Sugarcane', variety: 'FRP Standard', msp_per_quintal: 315, market_price_per_quintal: 325, unit: 'Quintal', season: 'Annual 2026', change_pct: 3.1, is_active: true },
+  { id: 'f13', crop: 'Mustard / Rapeseed', variety: 'Bold Seed', msp_per_quintal: 5950, market_price_per_quintal: 6100, unit: 'Quintal', season: 'Rabi 2026', change_pct: 2.8, is_active: true },
+  { id: 'f14', crop: 'Bengal Gram (Chana)', variety: 'Desi', msp_per_quintal: 5440, market_price_per_quintal: 5520, unit: 'Quintal', season: 'Rabi 2026', change_pct: 3.4, is_active: true },
 ];
 
 export function getMspFallbackData(lang: Lang) {
@@ -427,6 +451,12 @@ export function getMspFallbackData(lang: Lang) {
       { id: 'f6', crop: 'సోయాబీన్', variety: 'పసుపు పచ్చ', msp_per_quintal: 4980, market_price_per_quintal: 5050, unit: 'క్వింటాల్', season: 'ఖరీఫ్ 2026', change_pct: 3.3, is_active: true },
       { id: 'f7', crop: 'కందులు (తూర్)', variety: 'సాధారణ రకం', msp_per_quintal: 7525, market_price_per_quintal: 7600, unit: 'క్వింటాల్', season: 'ఖరీఫ్ 2026', change_pct: 4.9, is_active: true },
       { id: 'f8', crop: 'పొద్దుతిరుగుడు', variety: 'సాధారణ రకం', msp_per_quintal: 7980, market_price_per_quintal: 8100, unit: 'క్వింటాల్', season: 'ఖరీఫ్ 2026', change_pct: 1.9, is_active: true },
+      { id: 'f9', crop: 'పెసలు (మూంగ్)', variety: 'ప్రత్యేక రకం', msp_per_quintal: 8558, market_price_per_quintal: 8650, unit: 'క్వింటాల్', season: 'ఖరీఫ్ 2026', change_pct: 4.2, is_active: true },
+      { id: 'f10', crop: 'మినుములు (ఉరద్)', variety: 'సాధారణ రకం', msp_per_quintal: 7400, market_price_per_quintal: 7500, unit: 'క్వింటాల్', season: 'ఖరీఫ్ 2026', change_pct: 3.5, is_active: true },
+      { id: 'f11', crop: 'గుంటూరు ఎండు మిర్చి', variety: 'ప్రీమియం డ్రై', msp_per_quintal: 12500, market_price_per_quintal: 13200, unit: 'క్వింటాల్', season: 'రబీ 2026', change_pct: 6.1, is_active: true },
+      { id: 'f12', crop: 'చెరకు (షుగర్‌కేన్)', variety: 'FRP ప్రామాణికం', msp_per_quintal: 315, market_price_per_quintal: 325, unit: 'క్వింటాల్', season: 'వార్షిక 2026', change_pct: 3.1, is_active: true },
+      { id: 'f13', crop: 'ఆవాలు (మస్టర్డ్)', variety: 'సాధారణ విత్తనం', msp_per_quintal: 5950, market_price_per_quintal: 6100, unit: 'క్వింటాల్', season: 'రబీ 2026', change_pct: 2.8, is_active: true },
+      { id: 'f14', crop: 'శనగలు (శనగ)', variety: 'దేశీ రకం', msp_per_quintal: 5440, market_price_per_quintal: 5520, unit: 'క్వింటాల్', season: 'రబీ 2026', change_pct: 3.4, is_active: true },
     ];
   }
   if (lang === 'hi') {
@@ -438,7 +468,13 @@ export function getMspFallbackData(lang: Lang) {
       { id: 'f5', crop: 'गेहूं', variety: 'ग्रेड ए', msp_per_quintal: 2275, market_price_per_quintal: 2300, unit: 'क्विंटल', season: 'रबी 2026', change_pct: 2.3, is_active: true },
       { id: 'f6', crop: 'सोयाबीन', variety: 'पीला', msp_per_quintal: 4980, market_price_per_quintal: 5050, unit: 'क्विंटल', season: 'खरीफ 2026', change_pct: 3.3, is_active: true },
       { id: 'f7', crop: 'तूर (अरहर)', variety: 'सामान्य', msp_per_quintal: 7525, market_price_per_quintal: 7600, unit: 'क्विंटल', season: 'खरीफ 2026', change_pct: 4.9, is_active: true },
-      { id: 'f8', crop: 'सूरजमुखी', variety: 'सामान्य', msp_per_quintal: 7980, market_price_per_quintal: 8100, unit: 'क्विंटal', season: 'खरीफ 2026', change_pct: 1.9, is_active: true },
+      { id: 'f8', crop: 'सूरजमुखी', variety: 'सामान्य', msp_per_quintal: 7980, market_price_per_quintal: 8100, unit: 'क्विंटल', season: 'खरीफ 2026', change_pct: 1.9, is_active: true },
+      { id: 'f9', crop: 'मूंग', variety: 'विशेष', msp_per_quintal: 8558, market_price_per_quintal: 8650, unit: 'क्विंटल', season: 'खरीफ 2026', change_pct: 4.2, is_active: true },
+      { id: 'f10', crop: 'उड़द', variety: 'सामान्य', msp_per_quintal: 7400, market_price_per_quintal: 7500, unit: 'क्विंटल', season: 'खरीफ 2026', change_pct: 3.5, is_active: true },
+      { id: 'f11', crop: 'गुंटूर लाल मिर्च', variety: 'प्रीमियम सूखी', msp_per_quintal: 12500, market_price_per_quintal: 13200, unit: 'क्विंटल', season: 'रबी 2026', change_pct: 6.1, is_active: true },
+      { id: 'f12', crop: 'गन्ना', variety: 'FRP मानक', msp_per_quintal: 315, market_price_per_quintal: 325, unit: 'क्विंटल', season: 'वार्षिक 2026', change_pct: 3.1, is_active: true },
+      { id: 'f13', crop: 'सरसों', variety: 'मोटा बीज', msp_per_quintal: 5950, market_price_per_quintal: 6100, unit: 'क्विंटल', season: 'रबी 2026', change_pct: 2.8, is_active: true },
+      { id: 'f14', crop: 'चना (बंगाल ग्राम)', variety: 'देशी', msp_per_quintal: 5440, market_price_per_quintal: 5520, unit: 'क्विंटल', season: 'रबी 2026', change_pct: 3.4, is_active: true },
     ];
   }
   return MSP_FALLBACK;

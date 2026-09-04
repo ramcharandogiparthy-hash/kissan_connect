@@ -5,6 +5,7 @@ export interface SendOtpResult {
   message: string;
   sessionId?: string;
   maskedPhone?: string;
+  testOtp?: string;
 }
 
 export interface VerifyOtpResult {
@@ -28,7 +29,7 @@ export function formatIndianPhone(phone: string): { cleanDigits: string; formatt
 }
 
 /**
- * Send real SMS OTP to farmer via 2Factor API
+ * Send real SMS OTP via 2Factor API or Sandbox Mode
  * - Mode 1: Real 2Factor API if VITE_2FACTOR_API_KEY is configured in .env
  * - Mode 2: Supabase Edge Function `send-farmer-otp` if deployed
  * - Mode 3: Smart 2Factor Sandbox Mode for instant local testing without setup errors
@@ -104,7 +105,8 @@ export async function send2FactorFarmerOTP(phone: string): Promise<SendOtpResult
     success: true,
     sessionId: generatedSessionId,
     maskedPhone,
-    message: `✓ 2Factor Gateway (Sandbox Mode): Code dispatched to ${maskedPhone}. Enter code ${generatedOtp} or any 6-digit code.`,
+    testOtp: generatedOtp,
+    message: `✓ 2Factor Gateway (Sandbox Mode): Code dispatched to ${maskedPhone}.`,
   };
 }
 

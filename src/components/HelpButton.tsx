@@ -56,7 +56,7 @@ export function HelpButton() {
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-24 left-4 z-40 flex items-center gap-2 rounded-full bg-red-500 px-4 py-3 text-sm font-bold text-white shadow-[0_8px_30px_rgba(239,68,68,0.4)] transition-all hover:scale-105 lg:bottom-6 lg:left-6"
+        className="fixed bottom-20 left-4 z-50 flex items-center gap-2 rounded-full bg-red-500 px-4 py-3 text-sm font-bold text-white shadow-[0_8px_30px_rgba(239,68,68,0.4)] transition-all hover:scale-105 sm:bottom-24 lg:bottom-6 lg:left-6"
       >
         {open ? <X className="h-5 w-5" /> : <LifeBuoy className="h-5 w-5" />}
         <span className="hidden sm:inline">
@@ -67,7 +67,7 @@ export function HelpButton() {
       </button>
 
       {open && (
-        <div className="fixed bottom-40 left-4 z-40 w-[calc(100vw-2rem)] max-w-xs origin-bottom-left animate-scale-in lg:bottom-24 lg:left-6">
+        <div className="fixed bottom-36 left-4 z-50 w-[calc(100vw-2rem)] max-w-xs origin-bottom-left animate-scale-in sm:bottom-40 lg:bottom-24 lg:left-6">
           <div className="overflow-hidden rounded-3xl glass shadow-glass-lg">
             <div className="bg-gradient-to-r from-red-500 to-red-600 px-5 py-4 text-white">
               <p className="font-display text-base font-bold">{t('help_title')}</p>

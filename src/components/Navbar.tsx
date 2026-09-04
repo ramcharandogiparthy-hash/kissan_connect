@@ -232,7 +232,7 @@ export function MobileNav() {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+    <nav className="fixed bottom-0 left-0 w-full z-40 lg:hidden">
       <div className="mx-3 mb-3 rounded-3xl glass px-2 py-2 shadow-glass-lg">
         <div className="flex items-center justify-around">
           {items.map((item) => {

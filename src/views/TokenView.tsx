@@ -19,8 +19,12 @@ import {
   XCircle,
   Ban,
   Award,
+  Bell,
+  WifiOff,
+  AlertCircle,
 } from 'lucide-react';
 import { useApp, type TokenItem } from '@/lib/app-context';
+import { useNetworkStatus, getQueueStatusBadge } from '@/lib/queue-service';
 import { Reveal } from '@/components/Reveal';
 import { openGoogleMapsNavigation } from '@/lib/use-navigation';
 import { CancelSlotModal } from '@/components/CancelSlotModal';
@@ -132,8 +136,62 @@ export function TokenView() {
     { label: lang === 'te' ? 'తూకం & నిధుల జమ' : lang === 'hi' ? 'तोल एवं भुगतान' : 'Weighed & Paid', done: activeToken.currentStep >= 5 },
   ];
 
+  const isOnline = useNetworkStatus();
+
   return (
     <div className="mx-auto max-w-4xl px-5 pb-24 pt-28 lg:px-8 lg:pb-12">
+      {/* Network Connection Warning */}
+      {!isOnline && (
+        <div className="mb-4 rounded-3xl bg-amber-500 text-white p-3.5 px-5 shadow-lg flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <WifiOff className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider">⚠️ Connection Lost</p>
+              <p className="text-[11px] opacity-90">Queue status updates may be delayed. Reconnecting automatically...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* "YOUR TURN IS NEAR" Alert Banner */}
+      {activeToken.farmersAhead > 0 && activeToken.farmersAhead <= 3 && (
+        <div className="mb-6 rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-4 text-white shadow-glow-lg border-2 border-amber-300 animate-pulse flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/20 text-white">
+              <Bell className="h-6 w-6 animate-bounce" />
+            </span>
+            <div>
+              <h4 className="font-display text-sm font-extrabold tracking-wide uppercase">🔔 YOUR TURN IS NEAR</h4>
+              <p className="text-xs text-amber-100 font-semibold">
+                Only {activeToken.farmersAhead} farmer{activeToken.farmersAhead > 1 ? 's' : ''} ahead of you. Please move to the center entrance!
+              </p>
+            </div>
+          </div>
+          <span className="chip bg-white text-orange-950 font-black text-xs px-3 py-1 shrink-0">
+            ~{activeToken.estimatedWaitMin} Mins Left
+          </span>
+        </div>
+      )}
+
+      {/* "YOUR TOKEN IS BEING SERVED" Alert Banner */}
+      {(activeToken.status === 'Checked-In' || activeToken.status === 'Confirmed') && activeToken.farmersAhead === 0 && (
+        <div className="mb-6 rounded-3xl bg-gradient-to-r from-emerald-600 via-leaf-600 to-emerald-700 p-4 text-white shadow-glow-lg border-2 border-leaf-300 animate-glow-pulse flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/20 text-white">
+              <Zap className="h-6 w-6 fill-white" />
+            </span>
+            <div>
+              <h4 className="font-display text-sm font-extrabold tracking-wide uppercase">🚨 YOUR TOKEN IS BEING SERVED</h4>
+              <p className="text-xs text-emerald-100 font-semibold">
+                Token #{activeToken.token} is now called! Proceed immediately to Counter 1 for inspection.
+              </p>
+            </div>
+          </div>
+          <span className="chip bg-white text-emerald-950 font-black text-xs px-3 py-1 shrink-0">
+            NOW SERVING
+          </span>
+        </div>
+      )}
       {/* Toast Banner */}
       {toastMsg && (
         <div className="fixed top-20 right-4 z-50 rounded-2xl bg-forest-900 px-5 py-3 text-sm font-bold text-white shadow-glass-lg animate-slide-in-right border border-leaf-400/40">
