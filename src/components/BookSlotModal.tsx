@@ -15,7 +15,7 @@ interface BookSlotModalProps {
 }
 
 export function BookSlotModal({ isOpen, onClose }: BookSlotModalProps) {
-  const { lang, setView, addToken } = useApp();
+  const { lang, setView, addToken, navigateToProcurementTracking } = useApp();
   const [crop, setCrop] = useState('Paddy');
   const [quantity, setQuantity] = useState(40);
   const [centerId, setCenterId] = useState('vij');
@@ -218,11 +218,26 @@ export function BookSlotModal({ isOpen, onClose }: BookSlotModalProps) {
               <button
                 onClick={() => {
                   onClose();
+                  if (typeof navigateToProcurementTracking === 'function') {
+                    navigateToProcurementTracking(bookedToken ? `KSN-${bookedToken}` : 'PROC-2026-8942');
+                  } else {
+                    setView('tracking');
+                  }
+                }}
+                className="btn-primary w-full bg-gradient-to-r from-emerald-600 to-forest-700 hover:from-emerald-500 hover:to-forest-600 text-white shadow-lg text-sm font-extrabold py-3 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <span>📍 Track My Procurement Journey</span>
+                <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-md">Live</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onClose();
                   setView('token');
                 }}
-                className="btn-primary w-full"
+                className="btn-secondary w-full text-xs"
               >
-                {lang === 'te' ? 'టోకెన్ పాస్ & QR కోడ్ చూడండి' : lang === 'hi' ? 'डिजिटल पास और QR कोड देखें' : 'View Procurement Pass & QR Code'}
+                {lang === 'te' ? 'టోకెన్ పాస్ & QR కోడ్ చూడండి' : lang === 'hi' ? 'डिजिटल पास और QR कोड देखें' : 'View Digital Token Pass'}
               </button>
             </div>
           </div>

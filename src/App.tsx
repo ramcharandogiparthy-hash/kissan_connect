@@ -15,6 +15,7 @@ import { AuthView } from '@/views/AuthView';
 import { MSPView } from '@/views/MSPView';
 import { StaffView } from '@/views/StaffView';
 import { AdminView } from '@/views/AdminView';
+import { ProcurementTrackingView } from '@/views/ProcurementTrackingView';
 
 function CurrentView() {
   const { view, userProfile } = useApp();
@@ -94,6 +95,8 @@ function CurrentView() {
   switch (view) {
     case 'dashboard':
       return <DashboardView />;
+    case 'tracking':
+      return <ProcurementTrackingView />;
     case 'produce':
       return <ProduceView />;
     case 'map':
@@ -116,11 +119,9 @@ function CurrentView() {
 }
 
 function Shell() {
-  const showChrome = true;
-
   return (
     <div className="min-h-screen bg-cream-50">
-      {showChrome && <Navbar />}
+      <Navbar />
       <DemoToolbar />
       <Notifications />
       <main className="pb-32 lg:pb-12">
@@ -132,6 +133,7 @@ function Shell() {
     </div>
   );
 }
+
 
 export default function App() {
   return (

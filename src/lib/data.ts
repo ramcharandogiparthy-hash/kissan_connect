@@ -10,7 +10,8 @@ export type ViewId =
   | 'msp'
   | 'staff'
   | 'admin'
-  | 'auth';
+  | 'auth'
+  | 'tracking';
 
 export type Lang = 'en' | 'te' | 'hi' | 'ta' | 'kn' | 'ml' | 'mr' | 'bn' | 'gu' | 'pa' | 'or';
 

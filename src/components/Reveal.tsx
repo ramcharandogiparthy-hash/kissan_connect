@@ -36,8 +36,3 @@ export function Reveal({ children, className = '', delay = 0, as = 'div' }: Reve
     </Tag>
   );
 }
-
-export function useScrollSpy() {
-  const { view } = useApp();
-  return view;
-}

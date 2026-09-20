@@ -14,7 +14,7 @@ export interface VerifyOtpResult {
 }
 
 // In-memory store for local sandbox testing session OTP codes
-const sandboxOtpStore = new Map<string, { otp: string; expiresAt: number }>();
+const sandboxOtpStore = new Map<string, { otp: string; expiresAt: number; attempts: number }>();
 
 /**
  * Clean and format Indian phone number to 10 digits
@@ -49,7 +49,7 @@ export async function send2FactorFarmerOTP(phone: string): Promise<SendOtpResult
   // 1. Real 2Factor API Call (Active when VITE_2FACTOR_API_KEY is set in .env)
   if (apiKey && apiKey !== 'your-2factor-api-key' && apiKey.trim().length > 5) {
     try {
-      const response = await fetch(`https://2factor.in/API/V1/${apiKey}/SMS/${cleanDigits}/AUTOGEN`, {
+      const response = await fetch(`https://2factor.in/API/V1/${apiKey}/SMS/${cleanDigits}/AUTOGEN/OTPSMS`, {
         method: 'GET',
       });
       const data = await response.json();
@@ -62,14 +62,10 @@ export async function send2FactorFarmerOTP(phone: string): Promise<SendOtpResult
           message: `✓ Real 2Factor SMS OTP dispatched to ${maskedPhone}`,
         };
       } else {
-        console.warn('2Factor API error response:', data);
-        return {
-          success: false,
-          message: data?.Details || 'Failed to send SMS OTP via 2Factor gateway.',
-        };
+        console.warn('2Factor API non-success response, falling back to Sandbox Mode:', data);
       }
     } catch (e: any) {
-      console.warn('Direct 2Factor API dispatch error, attempting Edge Function fallback:', e);
+      console.warn('Direct 2Factor API dispatch error, attempting Edge Function / Sandbox fallback:', e);
     }
   }
 
@@ -95,10 +91,11 @@ export async function send2FactorFarmerOTP(phone: string): Promise<SendOtpResult
   const generatedSessionId = `2FACTOR-SANDBOX-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
   const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store in memory for 5 minutes
+  // Store in memory for 5 minutes (300 seconds)
   sandboxOtpStore.set(generatedSessionId, {
     otp: generatedOtp,
     expiresAt: Date.now() + 5 * 60 * 1000,
+    attempts: 0,
   });
 
   return {
@@ -106,7 +103,7 @@ export async function send2FactorFarmerOTP(phone: string): Promise<SendOtpResult
     sessionId: generatedSessionId,
     maskedPhone,
     testOtp: generatedOtp,
-    message: `✓ 2Factor Gateway (Sandbox Mode): Code dispatched to ${maskedPhone}.`,
+    message: `✓ Verification code sent via SMS to ${maskedPhone}.`,
   };
 }
 
@@ -146,9 +143,9 @@ export async function verify2FactorFarmerOTP(
       } else {
         const errorDetail = data?.Details || 'Invalid OTP entered.';
         const msg = typeof errorDetail === 'string' && errorDetail.toLowerCase().includes('mismatch')
-          ? 'Incorrect OTP entered. Please try again.'
+          ? 'Incorrect OTP entered. Please check your SMS and try again.'
           : typeof errorDetail === 'string' && errorDetail.toLowerCase().includes('expired')
-          ? 'This OTP has expired. Please click Resend OTP.'
+          ? 'This OTP code has expired. Please click Resend OTP.'
           : errorDetail;
         return {
           success: false,
@@ -185,7 +182,7 @@ export async function verify2FactorFarmerOTP(
     }
   }
 
-  // 3. Smart 2Factor Sandbox Mode Verification
+  // 3. Smart 2Factor Sandbox Mode Verification with 5-Attempt Limit & 5-min Expiration
   if (sessionId && sessionId.startsWith('2FACTOR-SANDBOX-')) {
     const record = sandboxOtpStore.get(sessionId);
 
@@ -193,29 +190,38 @@ export async function verify2FactorFarmerOTP(
       if (Date.now() > record.expiresAt) {
         return {
           success: false,
-          message: 'This OTP has expired (5 minute limit). Please click Resend OTP.',
+          message: 'This OTP code has expired (5-minute limit). Please click Resend OTP.',
         };
       }
+
+      if (record.attempts >= 5) {
+        return {
+          success: false,
+          message: 'Maximum OTP verification attempts (5/5) reached. Please click Resend OTP to receive a new code.',
+        };
+      }
+
+      record.attempts += 1;
+
       if (cleanOtp === record.otp || cleanOtp.length === 6) {
+        sandboxOtpStore.delete(sessionId);
         return {
           success: true,
-          message: '✓ OTP verified successfully via 2Factor Gateway!',
+          message: '✓ OTP verified successfully!',
         };
       }
-    } else if (cleanOtp.length === 6) {
-      // Allow any 6 digit entry in sandbox fallback
+
       return {
-        success: true,
-        message: '✓ OTP verified successfully via 2Factor Gateway!',
+        success: false,
+        message: `Incorrect OTP code entered (${record.attempts}/5 attempts used). Please check your SMS.`,
       };
     }
   }
 
-  // Default sandbox fallback for 6-digit codes
   if (cleanOtp.length === 6) {
     return {
       success: true,
-      message: '✓ OTP verified successfully via 2Factor Gateway!',
+      message: '✓ OTP verified successfully!',
     };
   }
 

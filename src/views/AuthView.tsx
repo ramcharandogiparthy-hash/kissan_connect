@@ -22,7 +22,7 @@ import {
 import { useApp } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
 import type { Lang } from '@/lib/data';
-import type { UserRole } from '@/lib/auth-service';
+import type { UserRole, UserProfile } from '@/lib/auth-service';
 
 const FIELD_IMG =
   'https://images.pexels.com/photos/20313652/pexels-photo-20313652.jpeg?auto=compress&cs=tinysrgb&w=1920';
@@ -226,8 +226,8 @@ function RealtimeOtpBox({
       <button
         type="button"
         onClick={() => onVerify(otp.join(''))}
-        disabled={loading || otp.join('').length < 6}
-        className="w-full rounded-2xl bg-gradient-to-r from-leaf-500 via-emerald-600 to-teal-600 py-4 text-sm font-bold text-white shadow-glow hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={loading}
+        className="w-full rounded-2xl bg-gradient-to-r from-leaf-500 via-emerald-600 to-teal-600 py-4 text-sm font-bold text-white shadow-glow hover:brightness-110 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5 text-gold-300" />}
         <span>Verify & Authenticate</span>
@@ -243,9 +243,11 @@ export function AuthView() {
     sendRoleOTP,
     verifyRoleOTP,
     completeFarmerProfileSetup,
+    loginFarmerWithPassword,
     submitStaffRegistration,
     loginStaffWithEmail,
     loginAdminWithEmail,
+    profilesList,
   } = useApp();
 
   // Active Role Portal Tab: 'farmer' | 'staff' | 'admin'
@@ -254,8 +256,12 @@ export function AuthView() {
   // ==========================================
   // FARMER AUTH & REGISTRATION STATE
   // ==========================================
-  const [farmerAuthMode, setFarmerAuthMode] = useState<'otp' | 'register'>('otp');
+  const [farmerAuthMode, setFarmerAuthMode] = useState<'password' | 'register' | 'otp'>('otp');
   const [farmerPhone, setFarmerPhone] = useState('9876543210');
+  const [farmerPassword, setFarmerPassword] = useState('farmer123');
+  const [showFarmerPassword, setShowFarmerPassword] = useState(false);
+
+  // Farmer OTP Login State
   const [farmerOtpStep, setFarmerOtpStep] = useState<'phone' | 'otp' | 'profile_setup'>('phone');
   const [farmerOtp, setFarmerOtp] = useState(['', '', '', '', '', '']);
   const [farmerOtpTimer, setFarmerOtpTimer] = useState(60);
@@ -263,14 +269,24 @@ export function AuthView() {
   const [farmerTestOtp, setFarmerTestOtp] = useState<string | undefined>();
   const [newFarmerUserId, setNewFarmerUserId] = useState<string | undefined>();
 
-  // Farmer profile setup / registration details
-  const [farmerName, setFarmerName] = useState('Ravi Kumar');
-  const [farmerRegPhone, setFarmerRegPhone] = useState('9876543210');
+  // Farmer Registration State with Phone Verification OTP
+  const [farmerRegOtpStep, setFarmerRegOtpStep] = useState<'form' | 'otp'>('form');
+  const [farmerName, setFarmerName] = useState('');
+  const [farmerRegPhone, setFarmerRegPhone] = useState('');
+  const [farmerRegPassword, setFarmerRegPassword] = useState('farmer123');
+  const [farmerRegConfirmPass, setFarmerRegConfirmPass] = useState('farmer123');
+  const [showFarmerRegPassword, setShowFarmerRegPassword] = useState(false);
+  const [showFarmerRegConfirmPass, setShowFarmerRegConfirmPass] = useState(false);
   const [farmerCrop, setFarmerCrop] = useState('Paddy (Grade A)');
   const [farmerLandAcres, setFarmerLandAcres] = useState('4.5');
   const [farmerVillage, setFarmerVillage] = useState('Kankipadu');
   const [farmerDistrict, setFarmerDistrict] = useState('Krishna');
   const [farmerState, setFarmerState] = useState('Andhra Pradesh');
+
+  const [farmerRegOtp, setFarmerRegOtp] = useState(['', '', '', '', '', '']);
+  const [farmerRegOtpTimer, setFarmerRegOtpTimer] = useState(60);
+  const [farmerRegSessionId, setFarmerRegSessionId] = useState<string | undefined>();
+  const [farmerRegTestOtp, setFarmerRegTestOtp] = useState<string | undefined>();
 
   // ==========================================
   // STAFF AUTH STATE (Email & Password Default)
@@ -333,6 +349,16 @@ export function AuthView() {
       if (interval) clearInterval(interval);
     };
   }, [farmerOtpStep, farmerOtpTimer]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (farmerRegOtpStep === 'otp' && farmerRegOtpTimer > 0) {
+      interval = setInterval(() => setFarmerRegOtpTimer((t) => t - 1), 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [farmerRegOtpStep, farmerRegOtpTimer]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -407,6 +433,125 @@ export function AuthView() {
       }
     } else {
       setError(res.message);
+    }
+  };
+
+  // Handle Farmer Password Login Submit
+  const handleFarmerPasswordLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    const cleanPhone = farmerPhone.trim().replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
+    if (!farmerPassword) {
+      setError('Please enter your account password.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await loginFarmerWithPassword(cleanPhone, farmerPassword);
+    setLoading(false);
+
+    if (!res.success) {
+      setError(res.message);
+    }
+  };
+
+  // Handle Start Registration: Validate details and send OTP for phone verification
+  const handleStartFarmerRegOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (loading) return;
+    setError(null);
+    setSuccessMsg(null);
+
+    const cleanPhone = farmerRegPhone.trim().replace(/\D/g, '');
+
+    if (!farmerName.trim() || !cleanPhone || cleanPhone.length < 10 || !farmerVillage.trim() || !farmerDistrict.trim() || !farmerState.trim()) {
+      setError('Please fill in all mandatory registration details including a valid 10-digit mobile number.');
+      return;
+    }
+
+    // Check duplicate mobile registration
+    const existingProfile = (profilesList || []).find(
+      (p: UserProfile) => p.role === 'farmer' && (p.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone
+    );
+    if (existingProfile) {
+      setError(`Mobile number (+91 ${cleanPhone}) is already registered. Please click "Farmer Login" to access your account.`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await sendRoleOTP(`+91${cleanPhone}`, 'farmer');
+
+      if (res.success) {
+        setFarmerRegSessionId(res.sessionId);
+        setFarmerRegTestOtp(res.testOtp);
+        setFarmerRegOtpStep('otp');
+        setFarmerRegOtp(['', '', '', '', '', '']);
+        setFarmerRegOtpTimer(60);
+        setSuccessMsg(`✓ Verification code sent! ${res.message}`);
+      } else {
+        setError(res.message);
+      }
+    } catch (err: any) {
+      console.error('Registration OTP error:', err);
+      setError(err?.message || 'Failed to dispatch verification OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Verify Registration OTP and Complete Setup
+  const handleVerifyFarmerRegOtpSubmit = async (enteredCode: string) => {
+    if (loading) return;
+    setError(null);
+    setSuccessMsg(null);
+
+    if (enteredCode.length < 6) {
+      setError('Please enter the complete 6-digit OTP code.');
+      return;
+    }
+
+    const cleanPhone = farmerRegPhone.trim().replace(/\D/g, '');
+
+    try {
+      setLoading(true);
+      const verifyRes = await verifyRoleOTP(`+91${cleanPhone}`, enteredCode, 'farmer', farmerRegSessionId);
+
+      if (!verifyRes.success) {
+        setError(verifyRes.message);
+        return;
+      }
+
+      const res = await completeFarmerProfileSetup({
+        phone: `+91 ${cleanPhone}`,
+        fullName: farmerName.trim(),
+        village: farmerVillage.trim(),
+        district: farmerDistrict.trim(),
+        state: farmerState.trim(),
+        preferredLanguage: lang,
+        primaryCrop: farmerCrop,
+        landAcres: parseFloat(farmerLandAcres) || 3.5,
+        password: farmerRegPassword,
+        autoLogin: true,
+      });
+
+      if (res.success) {
+        setSuccessMsg(`✓ Phone Verified! Registration Completed! Kisan Card ID: ${res.kisanCardId}.`);
+      } else {
+        setError(res.message);
+      }
+    } catch (err: any) {
+      console.error('Verify OTP error:', err);
+      setError(err?.message || 'Failed to verify OTP code. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -773,41 +918,56 @@ export function AuthView() {
                 </h2>
                 <p className="text-xs text-forest-200 mt-1">
                   {farmerAuthMode === 'register'
-                    ? 'Register your agricultural profile to generate your official Kisan Card ID & access MSP sales.'
-                    : farmerOtpStep === 'phone'
-                    ? 'Enter your mobile number to receive a 6-digit real-time verification code via SMS.'
-                    : farmerOtpStep === 'otp'
-                    ? `Enter the 6-digit verification code sent to +91 ${farmerPhone.slice(0, 5)} *****`
-                    : 'Please fill in your details to complete your official farmer profile.'}
+                    ? 'Register your agricultural profile with SMS phone verification to generate your official Kisan Card ID.'
+                    : 'Enter your registered 10-digit mobile number & password to access your dashboard.'}
                 </p>
 
                 {/* Farmer Mode Toggle Selector */}
-                <div className="mt-4 inline-flex p-1 rounded-2xl bg-white/10 border border-white/10">
+                <div className="mt-4 inline-flex flex-wrap justify-center gap-1.5 p-1 rounded-2xl bg-white/10 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFarmerAuthMode('password');
+                      setError(null);
+                      setSuccessMsg(null);
+                    }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      farmerAuthMode === 'password'
+                        ? 'bg-leaf-500 text-white shadow-sm'
+                        : 'text-white/70 hover:text-white'
+                    }`}
+                  >
+                    <Lock className="h-4 w-4" />
+                    <span>Farmer Login</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       setFarmerAuthMode('otp');
+                      setFarmerOtpStep('phone');
                       setError(null);
                       setSuccessMsg(null);
                     }}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       farmerAuthMode === 'otp'
                         ? 'bg-leaf-500 text-white shadow-sm'
                         : 'text-white/70 hover:text-white'
                     }`}
                   >
                     <Smartphone className="h-4 w-4" />
-                    <span>Mobile OTP Login</span>
+                    <span>Mobile Phone OTP</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
                       setFarmerAuthMode('register');
+                      setFarmerRegOtpStep('form');
                       setError(null);
                       setSuccessMsg(null);
                     }}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       farmerAuthMode === 'register'
                         ? 'bg-leaf-500 text-white shadow-sm'
                         : 'text-white/70 hover:text-white'
@@ -965,142 +1125,292 @@ export function AuthView() {
                 </>
               )}
 
-              {/* FARMER MODE 2: DIRECT NEW FARMER REGISTRATION */}
-              {farmerAuthMode === 'register' && (
-                <form onSubmit={handleDirectFarmerRegSubmit} className="space-y-3.5">
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-xs text-leaf-200 flex items-center gap-2">
-                    <Sprout className="h-4 w-4 text-leaf-300 shrink-0" />
-                    <span>Create a new farmer profile to get your official Kisan Card ID & instant slot booking.</span>
-                  </div>
-
+              {/* FARMER MODE 2: MOBILE NUMBER & PASSWORD LOGIN */}
+              {farmerAuthMode === 'password' && (
+                <form onSubmit={handleFarmerPasswordLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Full Farmer Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={farmerName}
-                      onChange={(e) => setFarmerName(e.target.value)}
-                      placeholder="e.g. Ravi Kumar"
-                      className="w-full rounded-xl border border-white/15 bg-white/10 p-3 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Mobile Phone Number *</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-leaf-200 block mb-1.5">
+                      Farmer Mobile Number
+                    </label>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-xs font-bold text-white shrink-0">
+                      <div className="flex items-center gap-1.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-3.5 text-base font-bold text-white shrink-0">
                         <span>🇮🇳</span>
                         <span>+91</span>
                       </div>
-                      <input
-                        type="tel"
-                        required
-                        maxLength={10}
-                        value={farmerRegPhone}
-                        onChange={(e) => setFarmerRegPhone(e.target.value.replace(/\D/g, ''))}
-                        placeholder="9876543210"
-                        className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
-                      />
+                      <div className="relative flex-1">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-forest-400" />
+                        <input
+                          type="tel"
+                          maxLength={10}
+                          value={farmerPhone}
+                          onChange={(e) => setFarmerPhone(e.target.value.replace(/\D/g, ''))}
+                          placeholder="9876543210"
+                          className="w-full rounded-2xl border border-white/15 bg-white/10 py-3.5 pl-12 pr-4 text-base font-bold text-white outline-none placeholder:text-white/40 focus:border-leaf-400 focus:bg-white/20"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Primary Crop *</label>
-                      <select
-                        value={farmerCrop}
-                        onChange={(e) => setFarmerCrop(e.target.value)}
-                        className="w-full rounded-xl border border-white/15 bg-forest-900 p-2.5 text-xs font-bold text-white outline-none focus:border-leaf-400"
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-leaf-200 block mb-1.5">
+                      Account Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showFarmerPassword ? 'text' : 'password'}
+                        value={farmerPassword}
+                        onChange={(e) => setFarmerPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-2xl border border-white/15 bg-white/10 py-3.5 pl-4 pr-12 text-sm font-bold text-white outline-none focus:border-leaf-400 focus:bg-white/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowFarmerPassword(!showFarmerPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors focus:outline-none"
                       >
-                        <option value="Paddy (Grade A)">Paddy (Grade A)</option>
-                        <option value="Cotton (Long Staple)">Cotton (Long Staple)</option>
-                        <option value="Maize (Yellow)">Maize (Yellow)</option>
-                        <option value="Red Gram / Toor">Red Gram / Toor</option>
-                        <option value="Chilli (Guntur Teja)">Chilli (Guntur Teja)</option>
-                        <option value="Sugarcane">Sugarcane</option>
-                        <option value="Groundnut / Peanut">Groundnut / Peanut</option>
-                        <option value="Wheat">Wheat</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Land Size (Acres) *</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        required
-                        value={farmerLandAcres}
-                        onChange={(e) => setFarmerLandAcres(e.target.value)}
-                        placeholder="4.5"
-                        className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
-                      />
+                        {showFarmerPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Demo Farmer Credentials Auto-Fill Badge */}
+                  <div className="rounded-2xl bg-white/5 p-3 text-xs space-y-1.5 border border-white/10 flex items-center justify-between">
                     <div>
-                      <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Village *</label>
-                      <input
-                        type="text"
-                        required
-                        value={farmerVillage}
-                        onChange={(e) => setFarmerVillage(e.target.value)}
-                        placeholder="e.g. Kankipadu"
-                        className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
-                      />
+                      <p className="font-bold text-leaf-300 text-[11px]">Demo Farmer Credentials:</p>
+                      <p className="text-[10px] font-mono text-white/80">9876543210 / farmer123</p>
                     </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">District *</label>
-                      <input
-                        type="text"
-                        required
-                        value={farmerDistrict}
-                        onChange={(e) => setFarmerDistrict(e.target.value)}
-                        placeholder="e.g. Krishna"
-                        className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">State *</label>
-                      <input
-                        type="text"
-                        required
-                        value={farmerState}
-                        onChange={(e) => setFarmerState(e.target.value)}
-                        placeholder="e.g. Andhra Pradesh"
-                        className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Preferred Language</label>
-                      <select
-                        value={lang}
-                        onChange={(e) => setLang(e.target.value as Lang)}
-                        className="w-full rounded-xl border border-white/15 bg-forest-900 p-2.5 text-xs font-bold text-white outline-none focus:border-leaf-400"
-                      >
-                        <option value="en">English</option>
-                        <option value="te">తెలుగు (Telugu)</option>
-                        <option value="hi">हिन्दी (Hindi)</option>
-                        <option value="ta">தமிழ் (Tamil)</option>
-                        <option value="kn">கன்னட (Kannada)</option>
-                        <option value="ml">മലയാളം (Malayalam)</option>
-                        <option value="mr">मराठी (Marathi)</option>
-                        <option value="bn">বাংলা (Bengali)</option>
-                      </select>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFarmerPhone('9876543210');
+                        setFarmerPassword('farmer123');
+                      }}
+                      className="rounded-lg bg-leaf-500/30 px-2.5 py-1 text-[10px] font-bold text-leaf-200 hover:bg-leaf-500/50"
+                    >
+                      ⚡ Auto-Fill
+                    </button>
                   </div>
 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-2xl bg-gradient-to-r from-leaf-500 to-emerald-600 py-3.5 text-sm font-bold text-white shadow-glow hover:brightness-110 transition flex items-center justify-center gap-2 mt-2"
+                    className="w-full rounded-2xl bg-gradient-to-r from-leaf-500 to-emerald-600 py-4 text-sm font-bold text-white shadow-glow hover:brightness-110 transition flex items-center justify-center gap-2"
                   >
-                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sprout className="h-5 w-5 text-gold-300" />}
-                    <span>🌾 Register Farmer & Access Dashboard</span>
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Lock className="h-5 w-5" />}
+                    <span>Login with Password</span>
                   </button>
                 </form>
+              )}
+
+              {/* FARMER MODE 3: NEW FARMER REGISTRATION WITH PHONE OTP VERIFICATION */}
+              {farmerAuthMode === 'register' && (
+                <>
+                  {farmerRegOtpStep === 'form' && (
+                    <form onSubmit={handleStartFarmerRegOtp} className="space-y-3.5">
+                      <div className="rounded-2xl bg-white/5 border border-white/10 p-3 text-xs text-leaf-200 flex items-center gap-2">
+                        <Sprout className="h-4 w-4 text-leaf-300 shrink-0" />
+                        <span>Fill registration details. Phone verification via 6-digit OTP is required next.</span>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Full Farmer Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={farmerName}
+                          onChange={(e) => setFarmerName(e.target.value)}
+                          placeholder="e.g. Ravi Kumar"
+                          className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Mobile Phone Number *</label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-xs font-bold text-white shrink-0">
+                            <span>🇮🇳</span>
+                            <span>+91</span>
+                          </div>
+                          <input
+                            type="tel"
+                            required
+                            maxLength={10}
+                            value={farmerRegPhone}
+                            onChange={(e) => setFarmerRegPhone(e.target.value.replace(/\D/g, ''))}
+                            placeholder="9876543210"
+                            className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Password *</label>
+                          <div className="relative">
+                            <input
+                              type={showFarmerRegPassword ? 'text' : 'password'}
+                              required
+                              value={farmerRegPassword}
+                              onChange={(e) => setFarmerRegPassword(e.target.value)}
+                              placeholder="••••••••"
+                              className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 pr-9 text-xs font-bold text-white outline-none focus:border-leaf-400 focus:bg-white/20"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowFarmerRegPassword(!showFarmerRegPassword)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors focus:outline-none"
+                            >
+                              {showFarmerRegPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Confirm Password *</label>
+                          <div className="relative">
+                            <input
+                              type={showFarmerRegConfirmPass ? 'text' : 'password'}
+                              required
+                              value={farmerRegConfirmPass}
+                              onChange={(e) => setFarmerRegConfirmPass(e.target.value)}
+                              placeholder="••••••••"
+                              className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 pr-9 text-xs font-bold text-white outline-none focus:border-leaf-400 focus:bg-white/20"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowFarmerRegConfirmPass(!showFarmerRegConfirmPass)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors focus:outline-none"
+                            >
+                              {showFarmerRegConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Primary Crop *</label>
+                          <select
+                            value={farmerCrop}
+                            onChange={(e) => setFarmerCrop(e.target.value)}
+                            className="w-full rounded-xl border border-white/15 bg-forest-900 p-2.5 text-xs font-bold text-white outline-none focus:border-leaf-400"
+                          >
+                            <option value="Paddy (Grade A)">Paddy (Grade A)</option>
+                            <option value="Cotton (Long Staple)">Cotton (Long Staple)</option>
+                            <option value="Maize (Yellow)">Maize (Yellow)</option>
+                            <option value="Red Gram / Toor">Red Gram / Toor</option>
+                            <option value="Chilli (Guntur Teja)">Chilli (Guntur Teja)</option>
+                            <option value="Sugarcane">Sugarcane</option>
+                            <option value="Groundnut / Peanut">Groundnut / Peanut</option>
+                            <option value="Wheat">Wheat</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Land Size (Acres) *</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            required
+                            value={farmerLandAcres}
+                            onChange={(e) => setFarmerLandAcres(e.target.value)}
+                            placeholder="4.5"
+                            className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Village *</label>
+                          <input
+                            type="text"
+                            required
+                            value={farmerVillage}
+                            onChange={(e) => setFarmerVillage(e.target.value)}
+                            placeholder="e.g. Kankipadu"
+                            className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">District *</label>
+                          <input
+                            type="text"
+                            required
+                            value={farmerDistrict}
+                            onChange={(e) => setFarmerDistrict(e.target.value)}
+                            placeholder="e.g. Krishna"
+                            className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">State *</label>
+                          <input
+                            type="text"
+                            required
+                            value={farmerState}
+                            onChange={(e) => setFarmerState(e.target.value)}
+                            placeholder="e.g. Andhra Pradesh"
+                            className="w-full rounded-xl border border-white/15 bg-white/10 p-2.5 text-xs font-bold text-white placeholder:text-white/40 outline-none focus:border-leaf-400 focus:bg-white/20"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-leaf-200 uppercase block mb-1">Preferred Language</label>
+                          <select
+                            value={lang}
+                            onChange={(e) => setLang(e.target.value as Lang)}
+                            className="w-full rounded-xl border border-white/15 bg-forest-900 p-2.5 text-xs font-bold text-white outline-none focus:border-leaf-400"
+                          >
+                            <option value="en">English</option>
+                            <option value="te">తెలుగు (Telugu)</option>
+                            <option value="hi">हिन्दी (Hindi)</option>
+                            <option value="ta">தமிழ் (Tamil)</option>
+                            <option value="kn">கன்னட (Kannada)</option>
+                            <option value="ml">മലയാളം (Malayalam)</option>
+                            <option value="mr">मराठी (Marathi)</option>
+                            <option value="bn">বাংলা (Bengali)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {error && (
+                        <div className="rounded-xl bg-rose-500/20 border border-rose-500/40 p-3 text-xs font-bold text-rose-200 flex items-center gap-2 animate-fade-in my-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                          <span>{error}</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full rounded-2xl bg-gradient-to-r from-leaf-500 to-emerald-600 py-3.5 text-sm font-bold text-white shadow-glow hover:brightness-110 transition flex items-center justify-center gap-2 mt-2"
+                      >
+                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5 text-gold-300" />}
+                        <span>Send OTP & Verify Phone</span>
+                      </button>
+                    </form>
+                  )}
+
+                  {farmerRegOtpStep === 'otp' && (
+                    <RealtimeOtpBox
+                      otp={farmerRegOtp}
+                      setOtp={setFarmerRegOtp}
+                      timer={farmerRegOtpTimer}
+                      loading={loading}
+                      testOtp={farmerRegTestOtp}
+                      onVerify={handleVerifyFarmerRegOtpSubmit}
+                      onResend={handleStartFarmerRegOtp}
+                      onChangePhone={() => {
+                        setFarmerRegOtpStep('form');
+                        setError(null);
+                        setSuccessMsg(null);
+                      }}
+                      phone={farmerRegPhone}
+                      roleLabel="farmer-reg"
+                    />
+                  )}
+                </>
               )}
             </div>
           </Reveal>

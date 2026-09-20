@@ -15,9 +15,12 @@ export type StaffPermissionKey =
 export interface UserProfile {
   id: string;
   userId: string;
+  authUserId?: string;
+  farmerId?: string;
   fullName: string;
   phone?: string;
   email?: string;
+  password?: string;
   role: UserRole;
   status: AccountStatus;
   village?: string;
@@ -28,6 +31,22 @@ export interface UserProfile {
   landAcres?: number;
   kisanCardId?: string;
   createdAt: number;
+}
+
+export interface FarmerRecord {
+  id: string;
+  auth_user_id: string;
+  phone: string;
+  full_name: string;
+  village?: string;
+  district?: string;
+  state?: string;
+  farmer_id?: string;
+  primary_crop?: string;
+  land_acres?: number;
+  preferred_language?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface StaffRegistrationRequest {
@@ -145,6 +164,7 @@ export const INITIAL_PROFILES: UserProfile[] = [
     userId: 'usr-farmer-1',
     fullName: 'Ravi Kumar',
     phone: '+91 98765 43210',
+    password: 'farmer123',
     role: 'farmer',
     status: 'active',
     village: 'Kankipadu',
@@ -161,6 +181,7 @@ export const INITIAL_PROFILES: UserProfile[] = [
     userId: 'usr-farmer-2',
     fullName: 'Venkat Rao',
     phone: '+91 94401 23456',
+    password: 'farmer123',
     role: 'farmer',
     status: 'approved',
     village: 'Gudivada',
@@ -177,6 +198,7 @@ export const INITIAL_PROFILES: UserProfile[] = [
     userId: 'usr-farmer-3',
     fullName: 'Srinivas Reddi',
     phone: '+91 98480 88776',
+    password: 'farmer123',
     role: 'farmer',
     status: 'active',
     village: 'Mangalagiri',
@@ -193,6 +215,7 @@ export const INITIAL_PROFILES: UserProfile[] = [
     userId: 'usr-farmer-4',
     fullName: 'Koteswara Rao',
     phone: '+91 94900 11223',
+    password: 'farmer123',
     role: 'farmer',
     status: 'active',
     village: 'Tenali Rural',
@@ -209,6 +232,7 @@ export const INITIAL_PROFILES: UserProfile[] = [
     userId: 'usr-farmer-5',
     fullName: 'Lakshmi Devi',
     phone: '+91 98499 55112',
+    password: 'farmer123',
     role: 'farmer',
     status: 'pending',
     village: 'Nuzvid',

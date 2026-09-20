@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Ticket,
   MapPin,
@@ -19,6 +19,7 @@ import {
   XCircle,
   MessageSquareWarning,
   CloudRain,
+  ListOrdered,
 } from 'lucide-react';
 import { useApp, formatRupee } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
@@ -152,7 +153,17 @@ function NotificationCard({ n, index }: { n: NotificationItem; index: number }) 
 }
 
 export function DashboardView() {
-  const { t, lang, setView, activeToken } = useApp();
+  const {
+    t,
+    lang,
+    setView,
+    activeToken,
+    procurementsList,
+    smartTokensList,
+    tokensList,
+    userProfile,
+    navigateToProcurementTracking,
+  } = useApp();
   const [progress, setProgress] = useState(0);
 
   const [showQualityModal, setShowQualityModal] = useState(false);
@@ -162,6 +173,60 @@ export function DashboardView() {
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showPredictorModal, setShowPredictorModal] = useState(false);
+
+  const availableProcurements = useMemo(() => {
+    const items: Array<{ id: string; tokenNumber: string; crop: string; status: string }> = [];
+
+    if (tokensList && tokensList.length > 0) {
+      tokensList.forEach((t) => items.push({ id: t.id || t.token, tokenNumber: t.token, crop: t.crop, status: t.status }));
+    }
+    if (smartTokensList && smartTokensList.length > 0) {
+      smartTokensList.forEach((st) => {
+        if (!items.some((i) => i.tokenNumber === st.tokenNumber)) {
+          items.push({ id: st.id, tokenNumber: st.tokenNumber, crop: st.serviceType || st.produceType || 'Paddy', status: st.status });
+        }
+      });
+    }
+    if (procurementsList && procurementsList.length > 0) {
+      procurementsList.forEach((pr) => {
+        if (!items.some((i) => i.id === pr.id || i.tokenNumber === pr.tokenId)) {
+          items.push({ id: pr.id, tokenNumber: pr.tokenId || pr.id, crop: pr.crop, status: pr.status });
+        }
+      });
+    }
+
+    const defaultItems = [
+      { id: 'PROC-2026-8942', tokenNumber: 'A127', crop: 'Paddy', status: 'Verified' },
+      { id: 'PROC-2026-7411', tokenNumber: 'B402', crop: 'Cotton', status: 'Approved' },
+      { id: 'PROC-2026-5120', tokenNumber: 'C109', crop: 'Maize', status: 'Completed' },
+      { id: 'KSN-042', tokenNumber: 'KSN-042', crop: 'Paddy', status: 'Quality Check' },
+    ];
+
+    defaultItems.forEach((di) => {
+      if (!items.some((it) => it.id === di.id || it.tokenNumber === di.tokenNumber)) {
+        items.push(di);
+      }
+    });
+
+    return items;
+  }, [tokensList, smartTokensList, procurementsList]);
+
+  const userProcurement = procurementsList?.find(
+    (p) => p.farmerName === userProfile?.fullName || p.farmerId === userProfile?.id
+  ) || procurementsList?.[0];
+
+  const userSmartToken = smartTokensList?.find(
+    (st) => st.farmerName === userProfile?.fullName || st.farmerId === userProfile?.id
+  ) || smartTokensList?.[0];
+
+  const hasActiveProcurement = Boolean(userProcurement || userSmartToken || activeToken || availableProcurements.length > 0);
+  const activeProcurementId = userProcurement?.id || userSmartToken?.id || activeToken?.id || availableProcurements[0]?.id || 'PROC-2026-8942';
+
+  const currentStatusText =
+    userProcurement?.status ||
+    userSmartToken?.status ||
+    (activeToken?.status === 'Confirmed' ? 'Waiting in Queue' : activeToken?.status) ||
+    'Quality Check';
 
   const { data: token } = useToken();
   const { data: queue } = useQueue();
@@ -209,6 +274,12 @@ export function DashboardView() {
     ? notifications
     : fallbackNotifs.map((item) => ({ ...item, display_time: item.time }));
 
+  const tr = (enText: string, teText: string, hiText: string) => {
+    if (lang === 'te') return teText;
+    if (lang === 'hi') return hiText;
+    return enText;
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-5 pb-24 pt-28 lg:px-8 lg:pb-12">
       {/* Greeting */}
@@ -241,9 +312,9 @@ export function DashboardView() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="chip bg-rose-500 text-white font-bold text-[10px]">
-                  Unseasonal Rain Warning
+                  {tr('Unseasonal Rain Warning', 'అకాల వర్ష సూచన హెచ్చరిక', 'बेमौसम बारिश की चेतावनी')}
                 </span>
-                <span className="text-xs font-semibold text-blue-200">Guntur & Krishna Region</span>
+                <span className="text-xs font-semibold text-blue-200">{tr('Guntur & Krishna Region', 'గుంటూరు & కృష్ణా ప్రాంతం', 'गुंटूर और कृष्णा क्षेत्र')}</span>
               </div>
               <p className="text-sm font-extrabold mt-0.5 text-white">
                 {lang === 'te'
@@ -255,8 +326,118 @@ export function DashboardView() {
             </div>
           </div>
           <button className="rounded-2xl bg-blue-500/30 border border-blue-300/40 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-500/50 transition shrink-0 flex items-center justify-center gap-1.5">
-            View Weather Radar <ArrowRight className="h-3.5 w-3.5" />
+            {tr('View Weather Radar', 'వాతావరణ రాడార్ చూడండి', 'मौसम रडार देखें')} <ArrowRight className="h-3.5 w-3.5" />
           </button>
+        </div>
+      </Reveal>
+
+      {/* 🚜 MY JOURNEY DASHBOARD CARD */}
+      <Reveal delay={70}>
+        <div className="mt-6 rounded-4xl glass p-5 shadow-glass border-2 border-emerald-400/50 bg-gradient-to-r from-emerald-950 via-forest-900 to-forest-950 text-white relative overflow-hidden">
+          <div className="absolute right-0 top-0 translate-x-6 -translate-y-6 h-36 w-36 rounded-full bg-emerald-400/10 blur-xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 to-leaf-600 text-white text-2xl shadow-glow">
+                🚜
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-xl font-black text-white">
+                    {tr('My Journey', 'నా ప్రయాణం', 'मेरी यात्रा')}
+                  </h3>
+                  <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300 border border-emerald-400/30">
+                    {tr('A-to-Z Tracking', 'పూర్తి ట్రాకింగ్', 'ए-टू-ज़ेड ट्रैकिंग')}
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-100/90 mt-0.5 font-medium">
+                  {tr('Track your procurement from slot booking to payment', 'స్లాట్ బుకింగ్ నుండి చెల్లింపు వరకు మీ కొనుగోలును గమనించండి', 'स्लॉट बुकिंग से भुगतान तक अपनी फसल को ट्रैक करें')}
+                </p>
+
+                {/* Status Preview */}
+                <div className="mt-2.5 flex items-center gap-2 text-xs font-semibold">
+                  {hasActiveProcurement ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs text-leaf-300 border border-leaf-400/30">
+                      <span className="h-2 w-2 animate-ping rounded-full bg-leaf-400" />
+                      {tr('Current Status:', 'ప్రస్తుత స్థితి:', 'वर्तमान स्थिति:')} <strong className="text-white font-extrabold">{currentStatusText}</strong>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-3 py-1 text-xs text-amber-200 border border-amber-400/30">
+                      {tr('⚠️ No active procurement journey.', '⚠️ ప్రస్తుతానికి యాక్టివ్ కొనుగోలు ఏదీ లేదు.', '⚠️ कोई सक्रिय खरीद यात्रा नहीं।')}
+                    </span>
+                  )}
+                </div>
+
+                {/* Quick Multi-Token Selector Pills */}
+                {hasActiveProcurement && availableProcurements.length > 0 && (
+                  <div className="mt-3 flex items-center gap-1.5 flex-wrap text-xs">
+                    <span className="text-[11px] font-bold text-emerald-300 shrink-0">
+                      {tr('Switch Token:', 'టోకెన్ మార్చండి:', 'टोकन बदलें:')}
+                    </span>
+                    {availableProcurements.map((item: { id: string; tokenNumber: string; crop: string; status: string }) => (
+                      <button
+                        key={item.id + item.tokenNumber}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (typeof navigateToProcurementTracking === 'function') {
+                            navigateToProcurementTracking(item.id || item.tokenNumber);
+                          } else {
+                            setView('tracking');
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-xl bg-white/10 hover:bg-white/20 px-2.5 py-1 text-[11px] font-bold text-white transition border border-white/15 hover:border-white/40 shrink-0"
+                      >
+                        <span className="font-mono font-black">#{item.tokenNumber}</span>
+                        <span className="text-leaf-300 font-semibold">({item.crop})</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="w-full sm:w-auto shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              {hasActiveProcurement ? (
+                <>
+                  <button
+                    onClick={() => {
+                      if (typeof navigateToProcurementTracking === 'function') {
+                        navigateToProcurementTracking(activeProcurementId);
+                      } else {
+                        setView('tracking');
+                      }
+                    }}
+                    className="btn-primary w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-leaf-500 hover:from-emerald-400 hover:to-leaf-400 text-forest-950 font-extrabold text-xs py-3 px-5 rounded-2xl shadow-glow flex items-center justify-center gap-2 transition hover:scale-[1.02]"
+                  >
+                    <span>{tr('View My Journey', 'నా ప్రయాణం చూడండి', 'मेरी यात्रा देखें')}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (typeof navigateToProcurementTracking === 'function') {
+                        navigateToProcurementTracking(activeProcurementId);
+                      } else {
+                        setView('tracking');
+                      }
+                      window.location.hash = 'step-by-step';
+                    }}
+                    className="w-full sm:w-auto bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-300/40 font-black text-xs py-3 px-4 rounded-2xl flex items-center justify-center gap-1.5 transition hover:scale-[1.02] shadow-sm"
+                  >
+                    <ListOrdered className="h-4 w-4 text-amber-300" />
+                    <span>{tr('📋 View Step by Step', '📋 దశల వారీ వివరాలు', '📋 चरण-दर-चरण देखें')}</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowBookSlotModal(true)}
+                  className="btn-gold w-full sm:w-auto text-xs py-3 px-5 rounded-2xl font-bold flex items-center justify-center gap-2"
+                >
+                  <span>{tr('Book a Slot', 'స్లాట్ బుక్ చేయండి', 'स्लॉट बुक करें')}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </Reveal>
 
@@ -283,7 +464,13 @@ export function DashboardView() {
 
           {/* Quality Assessor Card */}
           <button
-            onClick={() => setView('quality')}
+            onClick={() => {
+              if (typeof setShowQualityModal === 'function') {
+                setShowQualityModal(true);
+              } else {
+                setView('quality');
+              }
+            }}
             className="group flex items-center gap-3.5 rounded-4xl glass p-4 text-left shadow-sm transition hover:shadow-glass hover:scale-[1.02] border-2 border-leaf-400/40 bg-gradient-to-br from-leaf-50/50 to-cream-50"
           >
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-leaf-500 to-forest-700 text-white shadow-glow">
@@ -291,10 +478,10 @@ export function DashboardView() {
             </span>
             <div>
               <p className="font-display text-base font-extrabold text-forest-950 flex items-center gap-1.5">
-                🌾 {lang === 'te' ? 'పంట నాణ్యతా స్థితి' : 'Quality Checkup'}
+                🌾 {tr('Quality Check & Moisture', 'పంట నాణ్యతా & తేమ పరిశీలన', 'फसल गुणवत्ता व नमी जांच')}
               </p>
               <p className="text-xs text-forest-600 mt-0.5">
-                {lang === 'te' ? 'తేమ, గ్రేడింగ్ & ధృవీకరణ' : 'Track moisture, parameters & cert'}
+                {tr('Track moisture, parameters & cert', 'తేమ, గ్రేడింగ్ & ధృవీకరణ నివేదిక', 'नमी, ग्रेडिंग व प्रमाण पत्र जांचें')}
               </p>
             </div>
           </button>
@@ -406,10 +593,24 @@ export function DashboardView() {
                 <CircularProgress pct={progress} />
                 <div className="flex flex-col gap-1.5 w-full text-center">
                   <button
-                    onClick={() => setView('token')}
-                    className="btn-gold text-sm w-full"
+                    onClick={() => {
+                      if (typeof navigateToProcurementTracking === 'function') {
+                        navigateToProcurementTracking(activeToken?.id || 'PROC-2026-8942');
+                      } else {
+                        setView('tracking');
+                      }
+                    }}
+                    className="btn-primary bg-gradient-to-r from-leaf-400 to-emerald-500 hover:from-leaf-500 hover:to-emerald-600 text-forest-950 font-extrabold text-sm w-full py-2.5 shadow-glow flex items-center justify-center gap-1.5"
                   >
-                    {t('view_token')} <ArrowRight className="h-3.5 w-3.5" />
+                    <span>📍 Track Journey</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => setView('token')}
+                    className="btn-gold text-xs w-full py-1.5 opacity-90 hover:opacity-100"
+                  >
+                    {t('view_token')}
                   </button>
                   {(activeToken.status === 'Confirmed' || activeToken.status === 'Upcoming') && (
                     <button

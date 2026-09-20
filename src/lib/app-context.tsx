@@ -58,7 +58,7 @@ import {
   INITIAL_COUNTERS,
   calculateEstimatedWait,
 } from './queue-service';
-import { send2FactorFarmerOTP, verify2FactorFarmerOTP } from './twofactor-service';
+import { send2FactorFarmerOTP, verify2FactorFarmerOTP, formatIndianPhone } from './twofactor-service';
 
 export interface TokenItem {
   id: string;
@@ -440,6 +440,7 @@ interface AppState {
   sendRoleOTP: (phone: string, role: UserRole) => Promise<{ success: boolean; message: string; sessionId?: string; maskedPhone?: string; testOtp?: string }>;
   verifyFarmerOTP: (phone: string, otp: string, sessionId?: string) => Promise<{ success: boolean; message: string; isExisting?: boolean; userId?: string; profile?: UserProfile }>;
   verifyRoleOTP: (phone: string, otp: string, role: UserRole, sessionId?: string) => Promise<{ success: boolean; message: string; isExisting?: boolean; userId?: string; profile?: UserProfile }>;
+  refetchProfiles: () => Promise<void>;
   completeFarmerProfileSetup: (data: {
     phone: string;
     fullName: string;
@@ -452,7 +453,9 @@ interface AppState {
     kisanCardId?: string;
     userId?: string;
     autoLogin?: boolean;
+    password?: string;
   }) => Promise<{ success: boolean; message: string; profile?: UserProfile; kisanCardId?: string }>;
+  loginFarmerWithPassword: (phone: string, password: string) => Promise<{ success: boolean; message: string; profile?: UserProfile }>;
   submitStaffRegistration: (data: Partial<StaffRegistrationRequest> & { password?: string }) => Promise<{ success: boolean; message: string; request?: StaffRegistrationRequest }>;
   loginStaffWithEmail: (email: string, password?: string) => Promise<{ success: boolean; message: string; profile?: UserProfile }>;
   loginAdminWithEmail: (email: string, password?: string) => Promise<{ success: boolean; message: string; profile?: UserProfile }>;
@@ -502,14 +505,110 @@ interface AppState {
   startVoiceInput: () => void;
   autoSpeech: boolean;
   setAutoSpeech: (enable: boolean) => void;
+
+  trackingProcurementId: string | null;
+  setTrackingProcurementId: (id: string | null) => void;
+  navigateToProcurementTracking: (procurementIdOrToken?: string) => void;
+
+  isMobileFrame: boolean;
+  setIsMobileFrame: (val: boolean) => void;
+  toggleMobileFrame: () => void;
+
+  resetDatabaseState: () => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
+
+export function mapDbFarmerToUserProfile(row: any): UserProfile {
+  return {
+    id: row.id,
+    userId: row.auth_user_id || row.id,
+    authUserId: row.auth_user_id || undefined,
+    farmerId: row.farmer_id || undefined,
+    fullName: row.full_name || 'Farmer',
+    phone: row.phone || '',
+    role: 'farmer',
+    status: 'active',
+    village: row.village || '',
+    district: row.district || '',
+    state: row.state || '',
+    preferredLanguage: row.preferred_language || 'en',
+    primaryCrop: row.primary_crop || 'Paddy (Grade A)',
+    landAcres: row.land_acres ? Number(row.land_acres) : 3.5,
+    kisanCardId: row.farmer_id || `KC-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+  };
+}
+
+export function mapDbProfileToUserProfile(row: any): UserProfile {
+  return {
+    id: row.id,
+    userId: row.user_id || row.id,
+    authUserId: row.user_id || undefined,
+    farmerId: row.kisan_card_id || undefined,
+    fullName: row.full_name || 'Farmer',
+    phone: row.phone || '',
+    email: row.email || undefined,
+    password: row.password || undefined,
+    role: (row.role as UserProfile['role']) || 'farmer',
+    status: (row.status as AccountStatus) || 'active',
+    village: row.village || '',
+    district: row.district || '',
+    state: row.state || '',
+    preferredLanguage: row.preferred_language || 'en',
+    primaryCrop: row.primary_crop || 'Paddy (Grade A)',
+    landAcres: row.land_acres ? Number(row.land_acres) : 3.5,
+    kisanCardId: row.kisan_card_id || `KC-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+  };
+}
+
+export function mapUserProfileToDbRow(p: UserProfile): any {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id);
+  const dbId = isUuid ? p.id : undefined;
+
+  const isUserUuid = p.userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.userId);
+  const dbUserId = isUserUuid ? p.userId : null;
+
+  return {
+    ...(dbId ? { id: dbId } : {}),
+    user_id: dbUserId,
+    full_name: p.fullName,
+    phone: p.phone,
+    email: p.email || null,
+    password: p.password || null,
+    role: p.role,
+    status: p.status,
+    village: p.village,
+    district: p.district,
+    state: p.state,
+    preferred_language: p.preferredLanguage,
+    primary_crop: p.primaryCrop,
+    land_acres: p.landAcres,
+    kisan_card_id: p.kisanCardId,
+    created_at: new Date(p.createdAt).toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<ViewId>('auth');
   const [lang, setLang] = useState<Lang>('en');
   const [userRole, setUserRole] = useState<UserRole>('farmer');
+  const [trackingProcurementId, setTrackingProcurementId] = useState<string | null>('PROC-2026-8942');
+  const [isMobileFrame, setIsMobileFrame] = useState(false);
+
+  const toggleMobileFrame = useCallback(() => {
+    setIsMobileFrame((prev) => !prev);
+  }, []);
+
+  const navigateToProcurementTracking = useCallback((id?: string) => {
+    if (id) {
+      setTrackingProcurementId(id);
+    }
+    setView('tracking');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setView]);
   const [profilesList, setProfilesList] = useState<UserProfile[]>(() => {
     try {
       const saved = localStorage.getItem('kisan_profiles_list');
@@ -675,55 +774,140 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [qualityReportsList]);
 
-  // Real-time multi-tab cross-tab state synchronization listener
-  useEffect(() => {
-    let bc: BroadcastChannel | null = null;
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      try {
-        bc = new BroadcastChannel('kisan_queue_sync');
-        bc.onmessage = (event) => {
-          if (event.data && event.data.type === 'SYNC_TOKENS' && Array.isArray(event.data.tokensList)) {
-            setTokensList(event.data.tokensList);
-          }
-        };
-      } catch {}
-    }
-
-    const handleStorageChange = (e: StorageEvent) => {
-      try {
-        if (e.key === 'kisan_profiles_list' && e.newValue) {
-          setProfilesList(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_staff_requests_list' && e.newValue) {
-          setStaffRequestsList(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_staff_permissions_map' && e.newValue) {
-          setStaffPermissionsMap(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_system_audit_logs' && e.newValue) {
-          setSystemAuditLogs(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_tokens_list' && e.newValue) {
-          setTokensList(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_procurements_list' && e.newValue) {
-          setProcurementsList(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_payments_list' && e.newValue) {
-          setPaymentsList(JSON.parse(e.newValue));
-        }
-        if (e.key === 'kisan_quality_reports_list' && e.newValue) {
-          setQualityReportsList(JSON.parse(e.newValue));
-        }
-      } catch {}
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      if (bc) bc.close();
-      window.removeEventListener('storage', handleStorageChange);
-    };
+  const resetDatabaseState = useCallback(() => {
+    try {
+      localStorage.clear();
+    } catch {}
+    setProfilesList(INITIAL_PROFILES);
+    setStaffRequestsList(INITIAL_STAFF_REQUESTS);
+    setStaffPermissionsMap(INITIAL_STAFF_PERMISSIONS);
+    setSystemAuditLogs(INITIAL_SYSTEM_AUDIT_LOGS);
+    setTokensList(INITIAL_TOKENS);
+    setSmartTokensList(INITIAL_SMART_TOKENS);
+    setCountersList(INITIAL_COUNTERS);
+    setQueueLogsList([]);
+    setActiveTokenId('tok-1');
+    setProcurementsList(INITIAL_PROCUREMENTS);
+    setPaymentsList(INITIAL_PAYMENTS);
+    setAuditLogs(INITIAL_AUDIT_LOGS);
+    setQualityReportsList(INITIAL_QUALITY_RECORDS);
   }, []);
+
+  /** Fetch Latest Profiles directly from Supabase Database (farmers & profiles tables) */
+  const fetchProfilesFromSupabase = useCallback(async () => {
+    try {
+      const { data: farmersData } = await supabase.from('farmers').select('*');
+      const { data: profilesData } = await supabase.from('profiles').select('*');
+
+      const farmerProfiles = farmersData ? farmersData.map(mapDbFarmerToUserProfile) : [];
+      const userProfiles = profilesData ? profilesData.map(mapDbProfileToUserProfile) : [];
+
+      setProfilesList((prevList) => {
+        const map = new Map<string, UserProfile>();
+        INITIAL_PROFILES.forEach((p) => {
+          const key = (p.phone || p.id).replace(/\D/g, '').slice(-10) || p.id;
+          map.set(key, p);
+        });
+        userProfiles.forEach((p) => {
+          const key = (p.phone || p.id).replace(/\D/g, '').slice(-10) || p.id;
+          map.set(key, p);
+        });
+        farmerProfiles.forEach((p) => {
+          const key = (p.phone || p.id).replace(/\D/g, '').slice(-10) || p.id;
+          map.set(key, p);
+        });
+
+        const merged = Array.from(map.values());
+        try {
+          localStorage.setItem('kisan_profiles_list', JSON.stringify(merged));
+        } catch {}
+        return merged;
+      });
+    } catch (err) {
+      console.warn('Failed to fetch profiles/farmers from Supabase:', err);
+    }
+  }, []);
+
+  // Supabase Realtime Subscription & Initial Fetch for Farmers & Profiles
+  useEffect(() => {
+    fetchProfilesFromSupabase();
+
+    const updateProfileInList = (prof: UserProfile) => {
+      setProfilesList((prev) => {
+        const cleanP = (prof.phone || '').replace(/\D/g, '').slice(-10);
+        const exists = prev.some(
+          (p) => p.id === prof.id || (p.phone && p.phone.replace(/\D/g, '').slice(-10) === cleanP)
+        );
+        const updated = exists
+          ? prev.map((p) =>
+              p.id === prof.id || (p.phone && p.phone.replace(/\D/g, '').slice(-10) === cleanP) ? prof : p
+            )
+          : [prof, ...prev];
+        try {
+          localStorage.setItem('kisan_profiles_list', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+    };
+
+    const removeProfileFromList = (deletedId: string) => {
+      setProfilesList((prev) => {
+        const updated = prev.filter((p) => p.id !== deletedId);
+        try {
+          localStorage.setItem('kisan_profiles_list', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+    };
+
+    // Subscription for 'farmers' table
+    const farmersChannel = supabase
+      .channel('kisan_farmers_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'farmers' },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            updateProfileInList(mapDbFarmerToUserProfile(payload.new));
+          } else if (payload.eventType === 'DELETE') {
+            removeProfileFromList(payload.old.id);
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscription for 'profiles' table
+    const profilesChannel = supabase
+      .channel('kisan_profiles_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            updateProfileInList(mapDbProfileToUserProfile(payload.new));
+          } else if (payload.eventType === 'DELETE') {
+            removeProfileFromList(payload.old.id);
+          }
+        }
+      )
+      .subscribe();
+
+    const handleFocusOrVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProfilesFromSupabase();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleFocusOrVisibility);
+    window.addEventListener('focus', handleFocusOrVisibility);
+
+    return () => {
+      supabase.removeChannel(farmersChannel);
+      supabase.removeChannel(profilesChannel);
+      window.removeEventListener('visibilitychange', handleFocusOrVisibility);
+      window.removeEventListener('focus', handleFocusOrVisibility);
+    };
+  }, [fetchProfilesFromSupabase]);
 
   /** Real-Time Cross-Tab & Cross-Device Queue Token Sync */
   const syncTokensState = useCallback((newList: TokenItem[]) => {
@@ -1523,41 +1707,138 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  /** Auth Engine: Real 2Factor Farmer Phone OTP Dispatch */
+  /** Auth Engine: Real Supabase Phone Auth OTP Dispatch (with 2Factor fallback) */
   const sendFarmerOTP = useCallback(async (phone: string) => {
+    const { cleanDigits, formattedWithCountryCode, maskedPhone } = formatIndianPhone(phone);
+    if (!cleanDigits || cleanDigits.length !== 10 || !/^[6-9]\d{9}$/.test(cleanDigits)) {
+      return {
+        success: false,
+        message: 'Please enter a valid 10-digit Indian mobile number.',
+      };
+    }
+
+    try {
+      // Primary: Try Supabase Auth Phone OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: formattedWithCountryCode,
+      });
+
+      if (!error) {
+        return {
+          success: true,
+          sessionId: `SUPABASE-AUTH-${Date.now()}`,
+          maskedPhone,
+          message: `✓ Verification code sent via SMS to ${maskedPhone}.`,
+        };
+      } else {
+        console.warn('Supabase Auth signInWithOtp notice, using 2Factor SMS fallback:', error.message);
+      }
+    } catch (e: any) {
+      console.warn('Supabase Auth Exception, falling back to 2Factor:', e);
+    }
+
+    // Fallback: 2Factor Gateway or Sandbox
     return await send2FactorFarmerOTP(phone);
   }, []);
 
-  /** Auth Engine: Real 2Factor Verify Farmer OTP */
+  /** Auth Engine: Real Supabase Phone Auth OTP Verification (with 2Factor fallback) */
   const verifyFarmerOTP = useCallback(
     async (phone: string, otp: string, sessionId?: string) => {
-      const cleanDigits = phone.replace(/\D/g, '').slice(-10);
+      const { cleanDigits, formattedWithCountryCode } = formatIndianPhone(phone);
       const cleanOtp = otp.trim().replace(/\D/g, '');
 
       if (!cleanOtp || cleanOtp.length < 6) {
         return { success: false, message: 'Please enter the complete 6-digit OTP code.' };
       }
 
-      // Call 2Factor OTP verification service
-      const verifyRes = await verify2FactorFarmerOTP(phone, cleanOtp, sessionId);
-      if (!verifyRes.success) {
-        return { success: false, message: verifyRes.message };
+      let authenticatedUserId: string | null = null;
+
+      // 1. Try Supabase Auth verifyOtp first if not sandbox session
+      if (!sessionId || !sessionId.startsWith('2FACTOR-SANDBOX-')) {
+        try {
+          const { data, error } = await supabase.auth.verifyOtp({
+            phone: formattedWithCountryCode,
+            token: cleanOtp,
+            type: 'sms',
+          });
+
+          if (!error && data?.user) {
+            authenticatedUserId = data.user.id;
+            if (data.session) {
+              setSession(data.session);
+            }
+          } else if (error) {
+            console.warn('Supabase Auth verifyOtp notice:', error.message);
+          }
+        } catch (e) {
+          console.warn('Supabase Auth verifyOtp exception:', e);
+        }
       }
 
-      // Check if farmer profile already exists in profilesList
-      const profile = profilesList.find(
-        (p) => (p.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits
+      // 2. Fallback to 2Factor SMS / Sandbox verification if Supabase Auth verification did not complete
+      if (!authenticatedUserId) {
+        const verifyRes = await verify2FactorFarmerOTP(phone, cleanOtp, sessionId);
+        if (!verifyRes.success) {
+          return { success: false, message: verifyRes.message };
+        }
+      }
+
+      // 3. Query farmers table by auth_user_id OR phone
+      try {
+        let farmerRow: any = null;
+        if (authenticatedUserId) {
+          const { data: byAuth } = await supabase
+            .from('farmers')
+            .select('*')
+            .eq('auth_user_id', authenticatedUserId)
+            .maybeSingle();
+          farmerRow = byAuth;
+        }
+
+        if (!farmerRow && cleanDigits) {
+          const { data: byPhone } = await supabase
+            .from('farmers')
+            .select('*')
+            .ilike('phone', `%${cleanDigits}`)
+            .maybeSingle();
+          farmerRow = byPhone;
+        }
+
+        if (farmerRow) {
+          if (authenticatedUserId && (!farmerRow.auth_user_id || farmerRow.auth_user_id !== authenticatedUserId)) {
+            await supabase.from('farmers').update({ auth_user_id: authenticatedUserId }).eq('id', farmerRow.id);
+            farmerRow.auth_user_id = authenticatedUserId;
+          }
+
+          const profile = mapDbFarmerToUserProfile(farmerRow);
+          setUserProfile(profile);
+          setUserRole('farmer');
+          setView('dashboard');
+          return {
+            success: true,
+            isExisting: true,
+            message: '✓ Verified successfully. Redirecting to your Farmer Dashboard...',
+            profile,
+          };
+        }
+      } catch (e) {
+        console.warn('Error querying farmers table during OTP verify:', e);
+      }
+
+      // Check profilesList in memory for existing profile fallback
+      const existingProfile = profilesList.find(
+        (p) => p.role === 'farmer' && (p.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits
       );
 
-      if (profile && profile.role === 'farmer' && (profile.status === 'active' || profile.status === 'approved')) {
-        setUserProfile(profile);
+      if (existingProfile) {
+        setUserProfile(existingProfile);
         setUserRole('farmer');
         setView('dashboard');
         return {
           success: true,
           isExisting: true,
           message: '✓ Verified successfully. Redirecting to your Farmer Dashboard...',
-          profile,
+          profile: existingProfile,
         };
       }
 
@@ -1565,8 +1846,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return {
         success: true,
         isExisting: false,
-        userId: `usr-${Date.now()}`,
-        message: '✓ Verified successfully. Please complete your farmer profile setup.',
+        userId: authenticatedUserId || `usr-${Date.now()}`,
+        message: '✓ Verified successfully! Please complete your farmer profile setup.',
       };
     },
     [profilesList, setView, setUserProfile, setUserRole]
@@ -1574,8 +1855,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   /** Auth Engine: Send Real-Time OTP for any user role (Farmer, Staff, Admin) */
   const sendRoleOTP = useCallback(async (phone: string, role: UserRole) => {
-    return await send2FactorFarmerOTP(phone);
-  }, []);
+    return await sendFarmerOTP(phone);
+  }, [sendFarmerOTP]);
 
   /** Auth Engine: Verify Real-Time OTP for any user role (Farmer, Staff, Admin) */
   const verifyRoleOTP = useCallback(
@@ -1587,13 +1868,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { success: false, message: 'Please enter the complete 6-digit OTP code.' };
       }
 
+      // Delegate directly to verifyFarmerOTP for farmer role to avoid double API calls
+      if (role === 'farmer') {
+        return await verifyFarmerOTP(phone, cleanOtp, sessionId);
+      }
+
       const verifyRes = await verify2FactorFarmerOTP(phone, cleanOtp, sessionId);
       if (!verifyRes.success) {
         return { success: false, message: verifyRes.message };
-      }
-
-      if (role === 'farmer') {
-        return await verifyFarmerOTP(phone, cleanOtp, sessionId);
       }
 
       if (role === 'staff') {
@@ -1630,7 +1912,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Check if there is a pending request in staffRequestsList
         const req = staffRequestsList.find(
           (r) => (r.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits
         );
@@ -1648,7 +1929,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Fallback for instant demo testing: log in as active staff officer
         const demoStaffProfile: UserProfile = profilesList.find((p) => p.role === 'staff' && (p.status === 'approved' || p.status === 'active')) || {
           id: `prof-staff-${Date.now()}`,
           userId: `usr-staff-${Date.now()}`,
@@ -1699,8 +1979,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [profilesList, staffRequestsList, setView, setUserProfile, setUserRole, verifyFarmerOTP]
   );
 
+  /** Auth Engine: Farmer Login with Mobile Phone & Password */
+  const loginFarmerWithPassword = useCallback(
+    async (phone: string, password: string) => {
+      const cleanDigits = phone.replace(/\D/g, '').slice(-10);
+      if (!cleanDigits || cleanDigits.length < 10) {
+        return { success: false, message: 'Please enter a valid 10-digit mobile number.' };
+      }
+      if (!password) {
+        return { success: false, message: 'Please enter your account password.' };
+      }
 
-  /** Auth Engine: Complete New Farmer Profile Setup / Direct Registration */
+      const farmerProfile = profilesList.find(
+        (p) => p.role === 'farmer' && (p.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits
+      );
+
+      if (!farmerProfile) {
+        return { success: false, message: 'No registered farmer account found with this mobile number.' };
+      }
+
+      const expectedPass = farmerProfile.password || 'farmer123';
+      if (password !== expectedPass) {
+        return { success: false, message: 'Incorrect password for this mobile number.' };
+      }
+
+      if (farmerProfile.status === 'suspended') {
+        return { success: false, message: 'Your farmer account is suspended. Please contact admin.' };
+      }
+
+      setUserProfile(farmerProfile);
+      setUserRole('farmer');
+      setView('dashboard');
+
+      return {
+        success: true,
+        message: '✓ Login successful! Redirecting to your Farmer Dashboard...',
+        profile: farmerProfile,
+      };
+    },
+    [profilesList, setView, setUserProfile, setUserRole]
+  );
+
+  /** Auth Engine: Complete New Farmer Profile Setup / Direct Registration into `farmers` table */
   const completeFarmerProfileSetup = useCallback(
     async (data: {
       phone: string;
@@ -1714,16 +2034,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
       kisanCardId?: string;
       userId?: string;
       autoLogin?: boolean;
+      password?: string;
     }) => {
-      const cleanDigits = data.phone.replace(/\D/g, '');
-      const formattedPhone = cleanDigits.length === 10 ? `+91 ${cleanDigits}` : data.phone;
+      const cleanDigits = data.phone.replace(/\D/g, '').slice(-10);
+      const formattedPhone = `+91 ${cleanDigits}`;
       const now = Date.now();
 
+      let authUserId = data.userId;
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) {
+          authUserId = authData.user.id;
+        }
+      } catch (e) {
+        console.warn('Could not get authenticated user:', e);
+      }
+
+      if (!authUserId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(authUserId)) {
+        authUserId = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Math.floor(Math.random() * 1e8).toString(16)}-4000-8000-8000-${Math.floor(Math.random() * 1e12).toString(16)}`;
+      }
+
+      const kisanCardId = data.kisanCardId || `KC-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
       const newProfile: UserProfile = {
-        id: `prof-${now}`,
-        userId: data.userId || `usr-${now}`,
+        id: authUserId,
+        userId: authUserId,
+        authUserId: authUserId,
+        farmerId: kisanCardId,
         fullName: data.fullName,
         phone: formattedPhone,
+        password: data.password || 'farmer123',
         role: 'farmer',
         status: 'active',
         village: data.village,
@@ -1732,13 +2074,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         preferredLanguage: data.preferredLanguage || 'en',
         primaryCrop: data.primaryCrop || 'Paddy (Grade A)',
         landAcres: data.landAcres || 3.5,
-        kisanCardId: data.kisanCardId || `KC-AP-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        kisanCardId: kisanCardId,
         createdAt: now,
       };
 
       const autoLogin = data.autoLogin !== undefined ? data.autoLogin : true;
 
-      setProfilesList((prev) => [newProfile, ...prev]);
+      setProfilesList((prev) => {
+        const exists = prev.some((p) => p.id === newProfile.id || (p.phone && p.phone.replace(/\D/g, '').slice(-10) === cleanDigits));
+        const updated = exists
+          ? prev.map((p) => (p.id === newProfile.id || (p.phone && p.phone.replace(/\D/g, '').slice(-10) === cleanDigits) ? newProfile : p))
+          : [newProfile, ...prev];
+        try { localStorage.setItem('kisan_profiles_list', JSON.stringify(updated)); } catch {}
+        return updated;
+      });
 
       if (autoLogin) {
         setUserProfile(newProfile);
@@ -1746,24 +2095,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setView('dashboard');
       }
 
+      // 1. Insert/Upsert into `farmers` table in Supabase
       try {
-        await supabase.from('profiles').upsert([
-          {
-            id: newProfile.id,
-            user_id: newProfile.userId,
-            full_name: newProfile.fullName,
-            phone: newProfile.phone,
-            role: 'farmer',
-            status: 'active',
-            village: newProfile.village,
-            district: newProfile.district,
-            state: newProfile.state,
-            preferred_language: newProfile.preferredLanguage,
-            created_at: new Date(now).toISOString(),
-          },
-        ]);
+        const farmerRow = {
+          auth_user_id: authUserId,
+          phone: formattedPhone,
+          full_name: data.fullName,
+          village: data.village,
+          district: data.district,
+          state: data.state,
+          farmer_id: kisanCardId,
+          primary_crop: data.primaryCrop || 'Paddy (Grade A)',
+          land_acres: data.landAcres || 3.5,
+          preferred_language: data.preferredLanguage || 'en',
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: insertedFarmer, error: farmerErr } = await supabase
+          .from('farmers')
+          .upsert([farmerRow], { onConflict: 'auth_user_id' })
+          .select();
+
+        if (farmerErr) {
+          console.warn('Supabase farmers table insert/upsert warning:', farmerErr.message);
+          await supabase.from('farmers').upsert([farmerRow], { onConflict: 'phone' });
+        } else if (insertedFarmer && insertedFarmer[0]) {
+          newProfile.id = insertedFarmer[0].id;
+        }
       } catch (e) {
-        console.warn('Supabase profiles sync error:', e);
+        console.warn('Supabase farmers sync exception:', e);
+      }
+
+      // 2. Also sync into `profiles` table for backward compatibility
+      try {
+        const dbRow = mapUserProfileToDbRow(newProfile);
+        await supabase.from('profiles').upsert([dbRow], { onConflict: 'phone' });
+      } catch (e) {
+        console.warn('Supabase profiles sync exception:', e);
       }
 
       return {
@@ -2292,7 +2660,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [setUserProfile]);
 
-  const value = useMemo(
+  const value: AppState = useMemo(
     () => ({
       view,
       setView,
@@ -2307,6 +2675,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUserRole,
       userProfile,
       profilesList,
+      refetchProfiles: fetchProfilesFromSupabase,
       staffRequestsList,
       staffPermissionsMap,
       systemAuditLogs,
@@ -2315,6 +2684,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       verifyFarmerOTP,
       verifyRoleOTP,
       completeFarmerProfileSetup,
+      loginFarmerWithPassword,
       submitStaffRegistration,
       loginStaffWithEmail,
       loginAdminWithEmail,
@@ -2340,7 +2710,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       verifyQualityByStaff,
       updateQualityMeasurements,
       getQualityReportForToken,
-      approvePayment,
       processPayout,
       initiateGatewayPayment,
       verifyPaymentSignature,
@@ -2362,6 +2731,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startVoiceInput,
       autoSpeech,
       setAutoSpeech,
+      trackingProcurementId,
+      setTrackingProcurementId,
+      navigateToProcurementTracking,
+      isMobileFrame,
+      setIsMobileFrame,
+      toggleMobileFrame,
+      resetDatabaseState,
     }),
     [
       view,
@@ -2377,6 +2753,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUserRole,
       userProfile,
       profilesList,
+      fetchProfilesFromSupabase,
       staffRequestsList,
       staffPermissionsMap,
       systemAuditLogs,
@@ -2384,6 +2761,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendRoleOTP,
       verifyFarmerOTP,
       verifyRoleOTP,
+      completeFarmerProfileSetup,
+      loginFarmerWithPassword,
       submitStaffRegistration,
       loginStaffWithEmail,
       loginAdminWithEmail,
@@ -2409,7 +2788,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       verifyQualityByStaff,
       updateQualityMeasurements,
       getQualityReportForToken,
-      approvePayment,
       processPayout,
       retryFailedPayment,
       holdPayment,
@@ -2420,6 +2798,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startVoiceInput,
       autoSpeech,
       setAutoSpeech,
+      trackingProcurementId,
+      setTrackingProcurementId,
+      navigateToProcurementTracking,
+      isMobileFrame,
+      setIsMobileFrame,
+      toggleMobileFrame,
+      resetDatabaseState,
     ]
   );
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sprout, Menu, X, Globe, Mic, LayoutDashboard, Ticket, MapPin, Wallet, LogIn, LogOut, IndianRupee } from 'lucide-react';
+import { Sprout, Menu, X, Globe, Mic, LayoutDashboard, Ticket, MapPin, Wallet, LogIn, LogOut, IndianRupee, Smartphone, RotateCcw } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import { LANG_LABELS } from '@/lib/i18n';
 import type { Lang, ViewId } from '@/lib/data';
@@ -7,6 +7,7 @@ import type { Lang, ViewId } from '@/lib/data';
 const NAV_ITEMS: { id: ViewId; key: string }[] = [
   { id: 'home', key: 'nav_home' },
   { id: 'dashboard', key: 'nav_dashboard' },
+  { id: 'tracking', key: 'nav_tracking' },
   { id: 'produce', key: 'nav_produce' },
   { id: 'msp', key: 'nav_msp' },
   { id: 'map', key: 'nav_map' },
@@ -19,7 +20,7 @@ const NAV_ITEMS: { id: ViewId; key: string }[] = [
 ];
 
 export function Navbar() {
-  const { view, setView, lang, setLang, t, userProfile, signOut } = useApp();
+  const { view, setView, lang, setLang, t, userProfile, signOut, resetDatabaseState } = useApp();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -72,7 +73,7 @@ export function Navbar() {
                     : 'text-forest-600 hover:text-forest-900'
                 }`}
               >
-                {t(item.key)}
+                {item.id === 'tracking' ? (lang === 'te' ? 'నా జర్నీ' : lang === 'hi' ? 'मेरी यात्रा' : 'My Journey') : t(item.key)}
                 {view === item.id && (
                   <span className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-leaf-500" />
                 )}
@@ -81,6 +82,8 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-2">
+
+
             <div className="relative hidden sm:block">
               <button
                 onClick={() => setLangOpen((o) => !o)}
@@ -134,10 +137,20 @@ export function Navbar() {
                     </div>
                     <button
                       onClick={() => {
+                        resetDatabaseState();
+                        setUserMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-forest-700 transition hover:bg-forest-50 mt-1"
+                    >
+                      <RotateCcw className="h-4 w-4 text-leaf-600" />
+                      Reset App Data
+                    </button>
+                    <button
+                      onClick={() => {
                         signOut();
                         setUserMenuOpen(false);
                       }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50 mt-1"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50"
                     >
                       <LogOut className="h-4 w-4" />
                       Sign Out

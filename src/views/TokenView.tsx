@@ -21,10 +21,9 @@ import {
   Award,
   Bell,
   WifiOff,
-  AlertCircle,
 } from 'lucide-react';
 import { useApp, type TokenItem } from '@/lib/app-context';
-import { useNetworkStatus, getQueueStatusBadge } from '@/lib/queue-service';
+import { useNetworkStatus } from '@/lib/queue-service';
 import { Reveal } from '@/components/Reveal';
 import { openGoogleMapsNavigation } from '@/lib/use-navigation';
 import { CancelSlotModal } from '@/components/CancelSlotModal';

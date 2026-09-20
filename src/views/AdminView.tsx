@@ -47,6 +47,7 @@ export function AdminView() {
     qualityReportsList,
     verifyQualityByStaff,
     processPayout,
+    navigateToProcurementTracking,
   } = useApp();
 
   const [dateFilter, setDateFilter] = useState<'today' | '7d' | '30d' | '1y'>('30d');
@@ -1144,6 +1145,18 @@ export function AdminView() {
                               </span>
                             </td>
                             <td className="p-3.5 text-right space-x-1">
+                              <button
+                                onClick={() => {
+                                  if (typeof navigateToProcurementTracking === 'function') {
+                                    navigateToProcurementTracking(t.id || t.tokenNumber);
+                                  } else {
+                                    setView('tracking');
+                                  }
+                                }}
+                                className="rounded-xl bg-forest-900 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-forest-800 transition mr-1"
+                              >
+                                📍 View Journey
+                              </button>
                               <button
                                 onClick={() => {
                                   const nextP = currentPriority === 'Emergency' ? 'Standard' : 'Emergency';

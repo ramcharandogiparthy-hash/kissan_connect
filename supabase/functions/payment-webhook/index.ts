@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-razorpay-signature',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -36,7 +36,7 @@ serve(async (req) => {
     const isSignatureValid = await crypto.subtle.verify(
       'HMAC',
       key,
-      hexToBytes(signature),
+      (hexToBytes(signature) as unknown as BufferSource),
       encoder.encode(bodyText)
     );
 
@@ -100,7 +100,7 @@ serve(async (req) => {
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
   }
   return bytes;
 }

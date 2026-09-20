@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import type { ViewId } from '@/lib/data';
+import { askKisanMitraAI } from '@/lib/gemini';
+
 
 interface Message {
   id: string;
@@ -93,6 +95,8 @@ export function KisanMitra() {
   const [input, setInput] = useState('');
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [activeSpeakingId, setActiveSpeakingId] = useState<string | null>(null);
+  const [isThinking, setIsThinking] = useState(false);
+
 
   const recognitionRef = useRef<unknown>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -507,7 +511,7 @@ export function KisanMitra() {
     return { reply };
   };
 
-  const handleUserSend = (textToSend?: string, isVoice = false) => {
+  const handleUserSend = async (textToSend?: string, isVoice = false) => {
     unlockAudio();
     const query = textToSend ?? input;
     if (!query.trim()) return;
@@ -526,26 +530,47 @@ export function KisanMitra() {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
 
-    setTimeout(() => {
-      const { reply, targetView } = processQueryResponse(query);
+    const localResult = processQueryResponse(query);
+    let finalReply = localResult.reply;
+    const targetView = localResult.targetView;
 
-      const botMsg: Message = {
-        id: botMsgId,
-        role: 'bot',
-        text: reply,
-      };
-
-      setMessages((prev) => [...prev, botMsg]);
-
-      if (autoSpeech) {
-        speakText(reply, botMsgId);
+    // If query has no specific view navigation action, query Google AI Studio (Gemini)
+    if (!targetView) {
+      setIsThinking(true);
+      const activeTokenInfo = `Token #${activeToken.token}, Crop: ${activeToken.crop}, Queue Position: #${activeToken.queuePosition}, Wait: ${activeToken.estimatedWaitMin} mins`;
+      try {
+        const aiReply = await askKisanMitraAI({
+          query,
+          lang,
+          activeTokenInfo,
+        });
+        if (aiReply) {
+          finalReply = aiReply;
+        }
+      } catch (err) {
+        console.warn('Gemini AI fallback triggered:', err);
+      } finally {
+        setIsThinking(false);
       }
+    }
 
-      if (targetView) {
-        setTimeout(() => setView(targetView), 1600);
-      }
-    }, 400);
+    const botMsg: Message = {
+      id: botMsgId,
+      role: 'bot',
+      text: finalReply,
+    };
+
+    setMessages((prev) => [...prev, botMsg]);
+
+    if (autoSpeech) {
+      speakText(finalReply, botMsgId);
+    }
+
+    if (targetView) {
+      setTimeout(() => setView(targetView), 1600);
+    }
   };
+
 
   // Prominent Telugu Spoken Command Prompts
   const teluguVoicePrompts = [
@@ -723,7 +748,18 @@ export function KisanMitra() {
                   </div>
                 </div>
               ))}
+              {isThinking && (
+                <div className="flex justify-start">
+                  <div className="glass rounded-3xl rounded-bl-none px-4 py-3 text-sm text-forest-900 border border-leaf-300 flex items-center gap-2 shadow-sm">
+                    <Sparkles className="h-4 w-4 text-gold-500 animate-spin" />
+                    <span className="text-xs font-semibold text-forest-700 animate-pulse">
+                      {lang === 'te' ? 'కిసాన్ మిత్ర AI (Gemini) ఆలోచిస్తోంది...' : 'KisanMitra AI (Gemini) thinking...'}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
+
             </div>
 
             {/* Spoken Telugu Query Suggestion Chips */}

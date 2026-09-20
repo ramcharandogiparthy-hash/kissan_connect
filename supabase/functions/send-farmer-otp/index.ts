@@ -10,7 +10,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -49,9 +49,9 @@ serve(async (req) => {
       );
     }
 
-    // Official 2Factor AUTOGEN OTP SMS endpoint:
-    // https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE_NUMBER}/AUTOGEN
-    const targetUrl = `https://2factor.in/API/V1/${apiKey}/SMS/${formattedPhone}/AUTOGEN`;
+    // Official 2Factor AUTOGEN OTP SMS endpoint (Explicit OTPSMS template for text SMS):
+    // https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE_NUMBER}/AUTOGEN/OTPSMS
+    const targetUrl = `https://2factor.in/API/V1/${apiKey}/SMS/${formattedPhone}/AUTOGEN/OTPSMS`;
 
     const response = await fetch(targetUrl, { method: "GET" });
     const data = await response.json();

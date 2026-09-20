@@ -10,14 +10,11 @@ import {
   Loader2,
   UserCheck,
   UserPlus,
-  Sprout,
-  MapPin,
-  Calendar,
   Filter,
   Plus,
   Phone,
   X,
-  FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '@/lib/app-context';
 import { Reveal } from '@/components/Reveal';
@@ -37,9 +34,6 @@ interface QueueItem {
 const INITIAL_STAFF_QUEUE: QueueItem[] = [
   { token: 'A124', farmer: 'Venkat Rao', phone: '+91 94401 23456', crop: 'Paddy', qty: 40, time: '10:15 AM', status: 'Processing', moisturePct: 14.0 },
   { token: 'A125', farmer: 'Srinivas Reddi', phone: '+91 98480 88776', crop: 'Paddy', qty: 35, time: '10:20 AM', status: 'Waiting', moisturePct: 15.2 },
-  { token: 'A126', farmer: 'Koteswara Rao', phone: '+91 94900 11223', crop: 'Cotton', qty: 20, time: '10:25 AM', status: 'Waiting', moisturePct: 8.0 },
-  { token: 'A127', farmer: 'Ravi Kumar (You)', phone: '+91 98765 43210', crop: 'Paddy', qty: 40, time: '10:30 AM', status: 'Waiting', moisturePct: 14.0 },
-  { token: 'A128', farmer: 'Anjaneyulu M.', phone: '+91 94412 55443', crop: 'Maize', qty: 50, time: '10:45 AM', status: 'Waiting', moisturePct: 13.5 },
 ];
 
 export function StaffView() {
@@ -48,20 +42,18 @@ export function StaffView() {
     addProcurementRecord,
     qualityReportsList,
     verifyQualityByStaff,
-    updateQualityMeasurements,
     setView,
     userProfile,
     staffPermissionsMap,
-    smartTokensList,
     countersList,
     callNextQueueToken,
-    updateQueueTokenStatus,
-    updateCounterStatus,
     profilesList,
+    refetchProfiles,
     completeFarmerProfileSetup,
+    navigateToProcurementTracking,
   } = useApp();
 
-  const [selectedCounterId, setSelectedCounterId] = useState<string>(countersList[0]?.id || 'CNT-VJA-1');
+  const [selectedCounterId] = useState<string>(countersList[0]?.id || 'CNT-VJA-1');
 
   const activeUserId = userProfile?.userId || 'usr-staff-1';
   const activePermissions = staffPermissionsMap[activeUserId] ?? [
@@ -74,9 +66,8 @@ export function StaffView() {
     'farmer_management',
     'analytics_view',
   ];
-  const [queue, setQueue] = useState<QueueItem[]>(INITIAL_STAFF_QUEUE);
+  const queue = INITIAL_STAFF_QUEUE;
   const [activeTokenIdx, setActiveTokenIdx] = useState(0);
-  const [search, setSearch] = useState('');
   const [callingNext, setCallingNext] = useState(false);
   const [processingDbt, setProcessingDbt] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -99,7 +90,7 @@ export function StaffView() {
   const [newFarmerPhone, setNewFarmerPhone] = useState('');
   const [newFarmerVillage, setNewFarmerVillage] = useState('');
   const [newFarmerDistrict, setNewFarmerDistrict] = useState('Krishna');
-  const [newFarmerState, setNewFarmerState] = useState('Andhra Pradesh');
+  const [newFarmerState] = useState('Andhra Pradesh');
   const [newFarmerCrop, setNewFarmerCrop] = useState('Paddy (Grade A)');
   const [newFarmerAcres, setNewFarmerAcres] = useState('4.0');
   const [newFarmerKisanId, setNewFarmerKisanId] = useState('');
@@ -354,7 +345,20 @@ export function StaffView() {
                 </div>
 
                 {/* Staff Controls */}
-                <div className="mt-6 grid gap-3 sm:grid-cols-3 border-t border-white/10 pt-5">
+                <div className="mt-6 grid gap-3 sm:grid-cols-4 border-t border-white/10 pt-5">
+                  <button
+                    onClick={() => {
+                      if (typeof navigateToProcurementTracking === 'function') {
+                        navigateToProcurementTracking(activeFarmer.token);
+                      } else {
+                        setView('tracking');
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-leaf-500/30 border border-leaf-400/40 px-4 py-3 text-xs font-extrabold text-leaf-200 hover:bg-leaf-500/50 backdrop-blur"
+                  >
+                    📍 Track Journey
+                  </button>
+
                   <button
                     onClick={() => {
                       setToastMsg(lang === 'te' ? 'నాణ్యత తనిఖీ పూర్తయింది — గ్రేడ్-A ధృవీకరించబడింది!' : 'Moisture check verified — Grade A Approved!');
@@ -363,7 +367,7 @@ export function StaffView() {
                     className="flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-xs font-bold text-white hover:bg-white/20 backdrop-blur"
                   >
                     <Droplets className="h-4 w-4 text-blue-400" />
-                    {lang === 'te' ? 'నాణ్యత ధృవీకరణ నివేదిక' : 'Verify Moisture Check'}
+                    {lang === 'te' ? 'నాణ్యత ధృవీకరణ నివేదిక' : 'Verify Quality'}
                   </button>
 
                   <button
@@ -511,7 +515,20 @@ export function StaffView() {
               </div>
 
               <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
-                <Filter className="h-4 w-4 text-forest-500 shrink-0 ml-2" />
+                <button
+                  onClick={async () => {
+                    await refetchProfiles();
+                    setToastMsg('🔄 Synchronized latest farmer data directly from Supabase DB!');
+                    setTimeout(() => setToastMsg(null), 3000);
+                  }}
+                  className="rounded-xl bg-leaf-500/20 border border-leaf-400/40 px-3 py-2 text-xs font-bold text-leaf-800 hover:bg-leaf-500/30 transition flex items-center gap-1.5 shrink-0 mr-1"
+                  title="Force Sync with Supabase Database"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 text-leaf-700" />
+                  <span>Sync DB</span>
+                </button>
+
+                <Filter className="h-4 w-4 text-forest-500 shrink-0 ml-1" />
                 {(['all', 'active', 'pending'] as const).map((status) => (
                   <button
                     key={status}

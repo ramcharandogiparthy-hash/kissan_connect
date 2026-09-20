@@ -333,9 +333,6 @@ export function PaymentView() {
     paymentsList,
     procurementsList,
     processPayout,
-    initiateGatewayPayment,
-    verifyPaymentSignature,
-    processAdminRefund,
     retryFailedPayment,
   } = useApp();
 
