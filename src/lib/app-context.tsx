@@ -514,7 +514,7 @@ interface AppState {
   setIsMobileFrame: (val: boolean) => void;
   toggleMobileFrame: () => void;
 
-  resetDatabaseState: () => void;
+  resetDatabaseState?: () => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
