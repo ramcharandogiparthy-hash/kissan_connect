@@ -2737,7 +2737,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isMobileFrame,
       setIsMobileFrame,
       toggleMobileFrame,
-      resetDatabaseState,
+      resetDatabaseState: resetDatabaseState,
     }),
     [
       view,
